@@ -126,9 +126,9 @@
     function fillFormFieldsOnce() {
         const valuesToFill = {
             "#MobileNo": "03001234567",
-            "#Email": "tktsnatt@gmail.com",
+            "#Email": "abc@gmail.com",
             "#Job": "NILL",
-            // "#BirthCity": "PAKISTAN",
+            "#BirthCity": "PAKISTAN",
             "#IssueCity": "PAKISTAN"
         };
 

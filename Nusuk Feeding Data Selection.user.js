@@ -3,6 +3,8 @@
 // @namespace    https://umrah.nusuk.sa/
 // @version      1.0
 // @description  Designed to automatically select specific data options in the Nusuk
+// @updateURL    https://github.com/ranakiller/tampermonkey/raw/main/Nusuk%20Feeding%20Data%20Selection.user.js
+// @downloadURL  https://github.com/ranakiller/tampermonkey/raw/main/Nusuk%20Feeding%20Data%20Selection.user.js
 // @match        https://umrah.nusuk.sa/bsp/ExternalAgencies/Groups/createMutamerIntoGroup/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=nusuk.sa
 // @grant        none

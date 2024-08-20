@@ -3,8 +3,6 @@
 // @namespace    https://umrah.nusuk.sa/
 // @version      0.1
 // @description  Reload Nusuk Tab, Select 50Rows, Putting Custom Buttons, Clicking Add Mutamer Repetedly, Extracting Mutamers & Groups Details and Groups Creations Function
-// @updateURL    https://github.com/ranakiller/tampermonkey/raw/main/Nusuk%20Other%20Functions.user.js
-// @downloadURL  https://github.com/ranakiller/tampermonkey/raw/main/Nusuk%20Other%20Functions.user.js
 // @author       Furqan
 // @match        https://umrah.nusuk.sa/bsp/ExternalAgencies/Groups/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=nusuk.sa
@@ -48,7 +46,8 @@
 })();
 
 
-(function() { // Putting Button of Adding new Mutamer outside of popup menu
+// Adding new Mutamer Button outside of popup menu
+(function() {
     'use strict';
 
     function addNewButtons() {
@@ -107,7 +106,7 @@
 })();
 
 
-// Putting Button of Adding new Mutamer inside of popup menu
+// Add new Mutamer Button inside of popup menu
 (function() {
     'use strict';
 
@@ -237,10 +236,10 @@
 })();
 
 
+// Mutamer List Button in Feeding List page
 (function() {
     'use strict';
 
-    // Putting Mutamer List Button in Feeding List page
     function duplicateAndModifyLink() {
         // Find the original link element
         const originalLink = document.querySelector('a[href*="createMutamerIntoGroup"]');
@@ -279,7 +278,7 @@
 })();
 
 
-// Clicking Add Mutamer Button again&again on feedlig list page
+// Clicking Add Mutamer Button again N again on feedlig list page
 (function() {
     'use strict';
 
@@ -290,16 +289,26 @@
         }
     }
     clickAddMuatamerLink();
+})();
 
-    // Function to Change heading to Add Mutamer Link in Mutamer list page
+
+// Function to Change heading to Add Mutamer Link in Mutamer list page
+(function() {
+    'use strict';
+
+    const targetUrlPattern = /GetMuatamerListDetails/; // Specify the URL pattern to check
+
+    // Function to add the "Add" link
     function addMtmrLnk() {
         const MtmrLstElement = document.querySelector('.kt-portlet__head-label h3.kt-portlet__head-title');
-        if (MtmrLstElement) {
+        if (MtmrLstElement && targetUrlPattern.test(window.location.href)) {
             const xxURL = window.location.href;
             const newURL = xxURL.replace('GetMuatamerListDetails', 'createMutamerIntoGroup');
             MtmrLstElement.innerHTML = `<a href="${newURL}">Add</a>`;
         }
     }
+
+    // Run the function only when the window loads
     window.addEventListener('load', addMtmrLnk);
 })();
 
@@ -453,8 +462,17 @@
 })();
 
 
+// Groups Creation Functions
 (function() {
     'use strict';
+
+    // Specify the URL to check
+    const targetUrl = 'https://umrah.nusuk.sa/bsp/ExternalAgencies/Groups/CreateGroup'; // Change this to your target URL
+
+    // Function to check if the current URL matches the target URL
+    function isTargetUrl() {
+        return window.location.href === targetUrl;
+    }
 
     // Function to select the Islamabad Embassy
     function selectIslamabadEmbassy() {
@@ -499,9 +517,9 @@
             } else if (spanContent === 'sky pass') { // NOOR KAKI
                 const GroupName = document.getElementById('GroupNameEn');
                 const Notes = document.getElementById('Notes');
-               if (GroupName) {
-                   GroupName.value = 'SKYPASS-' + getTodayDate() + '-WITHOUT(TPT)';
-                   Notes.value = 'Without Transport';
+                if (GroupName) {
+                    GroupName.value = 'SKYPASS-' + getTodayDate() + '-WITHOUT(TPT)';
+                    Notes.value = 'Without Transport';
                 }
                 return;
             } else {
@@ -552,14 +570,12 @@
         }
     }
 
-    // Run the script initially
-    selectIslamabadEmbassy();
-
-    // Call the function to detect span content and set xTPT and xTPTNotes
-    CreateGroupName();
-
-    // Run the functions to click the buttons
-    clickNextStepButton();
-    clickAddMuatamerLink();
+    // Run the script only if the URL matches
+    if (isTargetUrl()) {
+        selectIslamabadEmbassy();
+        CreateGroupName();
+        clickNextStepButton();
+        clickAddMuatamerLink();
+    }
 
 })();

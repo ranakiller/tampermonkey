@@ -3,6 +3,8 @@
 // @namespace    https://umrah.nusuk.sa/
 // @version      0.1
 // @description  Reload Nusuk Tab, Select 50Rows, Putting Custom Buttons, Clicking Add Mutamer Repetedly, Extracting Mutamers & Groups Details and Groups Creations Function
+// @updateURL    https://github.com/ranakiller/tampermonkey/raw/main/Nusuk%20Other%20Functions.user.js
+// @downloadURL  https://github.com/ranakiller/tampermonkey/raw/main/Nusuk%20Other%20Functions.user.js
 // @author       Furqan
 // @match        https://umrah.nusuk.sa/bsp/ExternalAgencies/Groups/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=nusuk.sa

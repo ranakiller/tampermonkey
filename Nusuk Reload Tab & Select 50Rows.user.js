@@ -274,3 +274,81 @@
     // Run the function
     duplicateAndModifyLink();
 })();
+
+
+// Function to extract Group Code,Name And Pax Count from Groups Management List and put in text area at the bottom
+(function() {
+    'use strict';
+
+    let isTextAreaAdded = false;
+
+    function addTextArea() {
+        if (isTextAreaAdded) return;
+
+        const wrapper = document.querySelector('#GroupsList_wrapper');
+        if (!wrapper) return;
+
+        const newDiv = document.createElement('div');
+        newDiv.style.marginTop = '20px';
+
+        const textArea = document.createElement('textarea');
+        textArea.id = 'tableDataTextArea';
+        textArea.style.width = '100%';
+        textArea.style.height = '50px';
+        textArea.setAttribute('readonly', true);
+
+        newDiv.appendChild(textArea);
+        wrapper.parentNode.insertBefore(newDiv, wrapper.nextSibling);
+
+        isTextAreaAdded = true;
+    }
+
+    function extractTableData() {
+        const table = document.querySelector('#GroupsList');
+
+        if (!table) return;
+
+        const rows = table.querySelectorAll('tbody tr');
+        if (rows.length === 0) return;
+
+        const rowData = Array.from(rows).map(row => {
+            const cells = row.querySelectorAll('td');
+
+            // Extract the group code from the 2nd <td>
+            const groupCode = cells[1]?.innerText.trim() || '';
+
+            // Extract the group name from the first <div> inside the 3rd <td>
+            const groupName = cells[2]?.querySelector('div:first-child')?.innerText.trim() || '';
+
+            // Extract the pax count from the <span> with class "muatamers" inside the 6th <td>
+            const paxCount = cells[5]?.querySelector('span.muatamers')?.innerText.trim() || '';
+
+            return `${groupCode}\t${groupName}\t${paxCount}Px`;
+        }).join('\n');
+
+        const textArea = document.querySelector('#tableDataTextArea');
+        if (textArea) {
+            textArea.value = rowData;
+        }
+    }
+
+    function observeDOM() {
+        const observer = new MutationObserver(() => {
+            if (!isTextAreaAdded) addTextArea();
+            extractTableData();
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        if (isTextAreaAdded) observer.disconnect();
+    }
+
+    observeDOM();
+    document.addEventListener('DOMContentLoaded', () => {
+        addTextArea();
+        extractTableData();
+    });
+})();

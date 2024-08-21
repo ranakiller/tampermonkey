@@ -1,19 +1,19 @@
 // ==UserScript==
-// @name         Nusuk Other Functions
+// @name         Nusuk on Steroids
 // @namespace    https://umrah.nusuk.sa/
-// @version      0.1
-// @description  Reload Nusuk Tab, Select 50Rows, Putting Custom Buttons, Clicking Add Mutamer Repetedly, Extracting Mutamers & Groups Details and Groups Creations Function
-// @author       Furqan
+// @version      210824
+// @description  Reload Nusuk Tab, Select 50Rows, Putting Custom Buttons, Clicking Add Mutamer Repetedly, Extracting Mutamers & Groups Details, Groups Creations & Feeding Functions
+// @author       Furqan Rana
 // @match        https://umrah.nusuk.sa/bsp/ExternalAgencies/Groups/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=nusuk.sa
 // @grant        none
 // ==/UserScript==
 
-
+// Function to select option value 50 from the drop-down
 (function() {
     'use strict';
 
-    function selectOption50(selectName) { // Function to select option value 50 from the drop-down
+    function selectOption50(selectName) {
         const selectElement = document.querySelector(`select[name="${selectName}_length"]`);
         if (selectElement) {
             const option50 = selectElement.querySelector('option[value="50"]');
@@ -34,8 +34,8 @@
     window.addEventListener('load', runSelectOption50);
 })();
 
-
-(function() { // Function to reload the Nusuk Tab
+// Function to reload the Nusuk Tab
+(function() {
     function reloadSecondURL() {
         const urlToReload = window.location.href //"https://umrah.nusuk.sa/bsp/ExternalAgencies/Groups/Index";
         window.location.href = urlToReload;
@@ -44,7 +44,6 @@
     // Set the interval to reload every (360000 milliseconds / 6 minutes)
     setInterval(reloadSecondURL, 360000);
 })();
-
 
 // Adding new Mutamer Button outside of popup menu
 (function() {
@@ -104,7 +103,6 @@
         }, 500); // Add a delay to ensure the target elements are loaded
     });
 })();
-
 
 // Add new Mutamer Button inside of popup menu
 (function() {
@@ -167,7 +165,6 @@
         }, 100); // Add a delay to ensure the dropdown menu is loaded
     });
 })();
-
 
 // Feeding List Button inside popup menu
 (function() {
@@ -235,7 +232,6 @@
     });
 })();
 
-
 // Mutamer List Button in Feeding List page
 (function() {
     'use strict';
@@ -277,7 +273,6 @@
     duplicateAndModifyLink();
 })();
 
-
 // Clicking Add Mutamer Button again N again on feedlig list page
 (function() {
     'use strict';
@@ -290,7 +285,6 @@
     }
     clickAddMuatamerLink();
 })();
-
 
 // Function to Change heading to Add Mutamer Link in Mutamer list page
 (function() {
@@ -311,7 +305,6 @@
     // Run the function only when the window loads
     window.addEventListener('load', addMtmrLnk);
 })();
-
 
 // Function to extract PPNo and PaxName from Mutamer List and put in text area at the bottom
 (function() {
@@ -382,7 +375,6 @@
         extractTableData();
     });
 })();
-
 
 // Function to extract Group Code,Name And Pax Count from Groups Management List and put in text area at the bottom
 (function() {
@@ -460,7 +452,6 @@
         extractTableData();
     });
 })();
-
 
 // Groups Creation Functions
 (function() {
@@ -578,4 +569,193 @@
         clickAddMuatamerLink();
     }
 
+})();
+
+// Feeding Functions
+(function() {
+    'use strict';
+
+    // Check if the current URL matches the desired pattern
+    if (window.location.href.startsWith("https://umrah.nusuk.sa/bsp/ExternalAgencies/Groups/createMutamerIntoGroup/")) {
+
+        // Function to trigger file upload in the second div
+        function syncFileUploads(event) {
+            const fileInput1 = document.getElementById('PassportPictureUploader');
+            const fileInput2 = document.getElementById('VaccinationPictureUploader');
+
+            if (fileInput1 && fileInput2) {
+                const file = fileInput1.files[0];
+                if (file) {
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    fileInput2.files = dataTransfer.files;
+                    const event = new Event('change', { bubbles: true });
+                    fileInput2.dispatchEvent(event);
+                }
+            }
+        }
+
+        const fileInput1 = document.getElementById('PassportPictureUploader');
+        if (fileInput1) {
+            fileInput1.addEventListener('change', syncFileUploads);
+        }
+
+        let alreadySelected = false;
+
+        function selectOptionOnce(selectName, optionValue) {
+            const selectElement = document.querySelector(`select[name="${selectName}"]`);
+            if (selectElement && !alreadySelected) {
+                const option = selectElement.querySelector(`option[value="${optionValue}"]`);
+                if (option) {
+                    option.selected = true;
+                    selectElement.dispatchEvent(new Event('change'));
+                    alreadySelected = true;
+                }
+            }
+        }
+
+        function handleDOMChanges(mutationsList, observer) {
+            for (const mutation of mutationsList) {
+                if (mutation.type === 'childList' || mutation.type === 'attributes') {
+                    selectOptionOnce('MobileCountryKey', '92');
+                    selectOptionOnce('MartialStatus', '99');
+                    selectOptionOnce('BirthCountry', '92');
+                    selectOptionOnce('PassportType', '1');
+                }
+            }
+        }
+
+        const observer = new MutationObserver(handleDOMChanges);
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        function fillFormFieldsOnce() {
+            const valuesToFill = {
+                "#MobileNo": "03001234567",
+                "#Email": "skypass.umrah@gmail.com",
+                "#Job": "NILL",
+                "#BirthCity": "PAKISTAN",
+                "#IssueCity": "PAKISTAN",
+            };
+
+            for (const selector in valuesToFill) {
+                const element = document.querySelector(selector);
+                if (element) {
+                    element.value = valuesToFill[selector];
+                }
+            }
+        }
+
+        const formObserver = new MutationObserver(fillFormFieldsOnce);
+        formObserver.observe(document, { childList: true, subtree: true });
+
+        let updateDone = false;
+
+        function updateIssueDate() {
+            if (updateDone) return;
+
+            const expiryInput = document.getElementById('PassportExpiryDateAsText');
+            const issueInput = document.getElementById('PassportIssueDate');
+
+            if (expiryInput && issueInput) {
+                const expiryDate = new Date(expiryInput.value);
+                const oneMonthLater = new Date();
+                oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
+
+                if (expiryDate > oneMonthLater) {
+                    const yearsToMinus = parseInt(prompt('Enter number of years to Subtract:', '5'));
+                    const daysToAdd = parseInt(prompt('Enter number of days to Add:', '1'));
+
+                    if (isNaN(yearsToMinus) || isNaN(daysToAdd)) {
+                        alert('Invalid input. Please enter valid numbers.');
+                        return;
+                    }
+
+                    expiryDate.setFullYear(expiryDate.getFullYear() - yearsToMinus);
+                    expiryDate.setDate(expiryDate.getDate() + daysToAdd);
+
+                    const formattedIssueDate = expiryDate.toISOString().split('T')[0];
+                    issueInput.value = formattedIssueDate;
+
+                    updateDone = true;
+                    observer.disconnect();
+                }
+            }
+        }
+
+        updateIssueDate();
+
+        const issueDateObserver = new MutationObserver((mutations) => {
+            updateIssueDate();
+        });
+
+        issueDateObserver.observe(document.body, { childList: true, subtree: true });
+
+        function MtmrLstLnk() {
+            const addMtmrElement = document.querySelector('.kt-portlet__head-label h3.kt-portlet__head-title');
+
+            if (addMtmrElement) {
+                const xxURL = window.location.href;
+                const newURL = xxURL.replace('createMutamerIntoGroup', 'GetMuatamerListDetails');
+                addMtmrElement.innerHTML = `<a href="${newURL}">List</a>`;
+            }
+        }
+
+        window.addEventListener('load', MtmrLstLnk);
+
+        const selectObserver = new MutationObserver(handleDOMChanges);
+        selectObserver.observe(document.body, { childList: true, subtree: true });
+
+        const magnifierContainer = document.createElement('div');
+        magnifierContainer.style.position = 'fixed';
+        magnifierContainer.style.top = '1px';
+        magnifierContainer.style.right = '1px';
+        magnifierContainer.style.zIndex = '1000';
+        magnifierContainer.style.overflow = 'hidden';
+        magnifierContainer.style.width = '500px';
+        magnifierContainer.style.height = '500px';
+        magnifierContainer.style.display = 'none';
+        document.body.appendChild(magnifierContainer);
+
+        const magnifierImage = document.createElement('img');
+        magnifierImage.style.width = '100%';
+        magnifierImage.style.height = 'auto';
+        magnifierContainer.appendChild(magnifierImage);
+
+        function updateMagnifierImage() {
+            const originalImage = document.querySelector('#imageview img');
+            if (originalImage && originalImage.src) {
+                magnifierImage.src = originalImage.src;
+                magnifierContainer.style.display = 'block';
+            }
+        }
+
+        const imageviewDiv = document.querySelector('#imageview');
+        if (imageviewDiv) {
+            const imgElement = imageviewDiv.querySelector('img');
+            if (imgElement) {
+                const imageObserver = new MutationObserver((mutationsList) => {
+                    for (const mutation of mutationsList) {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'src') {
+                            updateMagnifierImage();
+                        }
+                    }
+                });
+
+                imageObserver.observe(imgElement, { attributes: true });
+            }
+        }
+
+        window.addEventListener('load', function() {
+            const captchaInput = document.getElementById('CaptchaCode');
+
+            if (captchaInput) {
+                const captchaParentDiv = captchaInput.closest('div');
+                const disclosureFormH4 = Array.from(document.getElementsByTagName('h4')).find(h4 => h4.textContent.includes('Disclosure Form'));
+
+                if (captchaParentDiv && disclosureFormH4) {
+                    disclosureFormH4.parentNode.insertBefore(captchaParentDiv, disclosureFormH4);
+                }
+            }
+        });
+    }
 })();

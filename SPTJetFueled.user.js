@@ -1,13 +1,35 @@
 // ==UserScript==
-// @name         SkyPass Ticketing Portal Functions
+// @name         SPTJetFueled
 // @namespace    https://skypass.pk/
 // @version      2024-01-10
 // @description  Add a new td tag that displays the days between departure dates
-// @author       You
-// @match        https://skypass.pk/agents/*
+// @author       Rana Furqan
+// @match        https://skypass.pk/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=skypass.pk
 // @grant        none
 // ==/UserScript==
+
+
+// This script automatically fills in the login details and clicks the login button on the Skypass ticket portal login page.
+(function() {
+    'use strict';
+
+    window.addEventListener('load', function() {
+        const emailField = document.querySelector('input[name="email"]');
+        const passwordField = document.querySelector('input[name="password"]');
+
+        if (emailField && passwordField) {
+            emailField.value = 'skypass.umrah@gmail.com';
+            passwordField.value = 'Umradp@spt2024';
+
+            const loginButton = document.querySelector('#main_author_form button[type="submit"]');
+
+            if (loginButton) {
+                loginButton.click();
+            }
+        }
+    });
+})();
 
 
 // Function to calculate days between two dates
@@ -107,7 +129,7 @@
 })();
 
 
-// This Function for making whatsapp message for all the groups in same airline header
+// This Function for making whatsapp message for all the dates for same sector in airline header
 (function() {
     'use strict';
 
@@ -394,8 +416,6 @@
 
             // Insert the new div after the first div and before the second div
             firstDiv.parentNode.insertBefore(newDiv, secondDiv);
-        } else {
-            console.error('Required divs not found');
         }
     }
 
@@ -589,6 +609,7 @@
 
                     // Add event listener to MRZ input field
                     mrzInput.addEventListener('input', () => {
+                        mrzInput.value = mrzInput.value.replace(/\s+/g, '').replace(/\n/g, ''); // Remove all spaces and newlines on input
                         autofillForm();
                     });
                 }
@@ -650,7 +671,7 @@
             for (let i = 1; i <= numRows; i++) {
                 const nationalityElement = document.getElementById(`${table.prefix}_nationality_${i}`);
                 if (nationalityElement) {
-                    nationalityElement.value = newNationality;
+                    nationalityElement.value = newNationality.toUpperCase();
                 }
             }
         });

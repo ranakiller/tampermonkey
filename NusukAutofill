@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         Nusuk Feeding Data Selection
-// @namespace    https://umrah.nusuk.sa/
+// @name         Nusuk Autofill
+// @namespace    https://umrahmasar.nusuk.sa/
 // @version      1.0
 // @description  Designed to automatically select specific data options in the Nusuk
-// @match        https://umrah.nusuk.sa/bsp/ExternalAgencies/Groups/createMutamerIntoGroup/*
+// @match        https://umrahmasar.nusuk.sa/bsp/ExternalAgencies/Groups/createMutamerIntoGroup/*
 // @grant        none
 // ==/UserScript==
 

@@ -1,13 +1,24 @@
 // ==UserScript==
 // @name         Nusuk on Steroids
-// @namespace    https://umrah.nusuk.sa/
+// @namespace    https://umrahmasar.nusuk.sa/
 // @version      210824
 // @description  Reload Nusuk Tab, Select 50Rows, Putting Custom Buttons, Clicking Add Mutamer Repetedly, Extracting Mutamers & Groups Details, Groups Creations & Feeding Functions
 // @author       Furqan Rana
-// @match        https://umrah.nusuk.sa/bsp/ExternalAgencies/Groups/*
+// @match        https://umrahmasar.nusuk.sa/bsp/ExternalAgencies/Groups/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=nusuk.sa
 // @grant        none
 // ==/UserScript==
+
+// Function to reload the Nusuk Tab
+(function() {
+    function reloadSecondURL() {
+        const urlToReload = window.location.href //"https://umrahmasar.nusuk.sa/bsp/ExternalAgencies/Groups/Index";
+        window.location.href = urlToReload;
+    }
+
+    // Set the interval to reload every (360000 milliseconds / 6 minutes)
+    setInterval(reloadSecondURL, 360000);
+})();
 
 // Function to select option value 50 from the drop-down
 (function() {
@@ -17,14 +28,14 @@
         const selectElement = document.querySelector(`select[name="${selectName}_length"]`);
         if (selectElement) {
             const option50 = selectElement.querySelector('option[value="50"]');
-            if (option50) {
+            if (option50 && selectElement.value !== "50") {
                 option50.selected = true;
                 selectElement.dispatchEvent(new Event('change'));
             }
         }
     }
 
-    // Run the script for both GroupsList and MuatamerList initially and after page load
+    // Run the script for both GroupsList and MuatamerList initially
     function runSelectOption50() {
         selectOption50('GroupsList');
         selectOption50('MuatamerList');
@@ -32,55 +43,63 @@
 
     runSelectOption50();
     window.addEventListener('load', runSelectOption50);
+
+    // Check periodically if the value is not 50
+    setInterval(runSelectOption50, 1000); // Check every 1000 milliseconds (1 second)
 })();
 
-// Function to reload the Nusuk Tab
-(function() {
-    function reloadSecondURL() {
-        const urlToReload = window.location.href //"https://umrah.nusuk.sa/bsp/ExternalAgencies/Groups/Index";
-        window.location.href = urlToReload;
-    }
-
-    // Set the interval to reload every (360000 milliseconds / 6 minutes)
-    setInterval(reloadSecondURL, 360000);
-})();
 
 // Adding new Mutamer Button outside of popup menu
 (function() {
     'use strict';
 
-    function addNewButtons() {
+    function addOrReplaceButtons() {
         const targetButtons = Array.from(document.querySelectorAll('td a[href*="/bsp/ExternalAgencies/Groups/GetMuatamerListDetails/"].kt-badge--primary.kt-badge--inline.kt-badge--pill.kt-font-md'));
 
         targetButtons.forEach(originalButton => {
             if (!originalButton.dataset.duplicated) {
-
                 // Extract the dynamic part from the original button's href
                 const dynamicPart = originalButton.href.split('/').pop();
-                const newButtonHref = `https://umrah.nusuk.sa/bsp/ExternalAgencies/Groups/createMutamerIntoGroup/${dynamicPart}`;
 
-                // Clone the original button
-                const newButton = originalButton.cloneNode(true);
-                newButton.href = newButtonHref;
+                // Find the row containing the button
+                const parentTr = originalButton.closest('tr');
 
-                // Change the text of the new button to an icon with a plus sign
-                newButton.innerHTML = `<i class="fas fa-plus" style="color: black;"></i>`;
-                // Add padding, remove background color, and add border to the new button
-                newButton.style.padding = "2px 10px"; // Adjust the padding as needed
-                newButton.style.display = "inline-block"; // Ensure the button displays properly
-                newButton.style.backgroundColor = "transparent"; // Remove background color
-                newButton.style.border = "1px solid black"; // Add 1px black border
+                // Check if the state "NEW" is present in the row
+                const stateCells = parentTr.querySelectorAll('td');
+                const hasNewState = Array.from(stateCells).some(cell => cell.textContent.trim() === 'New');
 
-                // Insert the new button in the next <td> element
+                // Create and insert the appropriate button based on state
                 const parentTd = originalButton.closest('td');
                 const nextTd = parentTd.nextElementSibling;
 
                 if (nextTd) {
-                    nextTd.appendChild(newButton);
-                }
+                    let newButton;
 
-                // Mark the original button as processed
-                originalButton.dataset.duplicated = 'true';
+                    if (hasNewState) {
+                        // Add button
+                        const newButtonHref = `https://umrahmasar.nusuk.sa/bsp/ExternalAgencies/Groups/createMutamerIntoGroup/${dynamicPart}`;
+                        newButton = originalButton.cloneNode(true);
+                        newButton.href = newButtonHref;
+                        newButton.innerHTML = `<i class="fas fa-plus" style="color: black;"></i>`;
+                    } else {
+                        // Delete button
+                        newButton = document.createElement('a');
+                        newButton.href = `javascript:RemoveItem('${dynamicPart}')`;
+                        newButton.className = 'kt-nav__item';
+                        newButton.id = 'qa-delete-group';
+                        newButton.innerHTML = `<i class="kt-nav__link-icon flaticon2-trash" style="color: red;"></i>`;
+                    }
+
+                    // Style the button
+                    newButton.style.padding = "2px 10px";
+                    newButton.style.display = "inline-block";
+                    newButton.style.backgroundColor = "transparent";
+
+                    nextTd.appendChild(newButton);
+
+                    // Mark the original button as processed
+                    originalButton.dataset.duplicated = 'true';
+                }
             }
         });
     }
@@ -88,7 +107,7 @@
     function observeChanges() {
         const observer = new MutationObserver((mutations) => {
             mutations.forEach(() => {
-                addNewButtons();
+                addOrReplaceButtons();
             });
         });
 
@@ -98,11 +117,12 @@
     // Wait for the page to fully load
     window.addEventListener('load', function() {
         setTimeout(() => {
-            addNewButtons();
+            addOrReplaceButtons();
             observeChanges();
         }, 500); // Add a delay to ensure the target elements are loaded
     });
 })();
+
 
 // Add new Mutamer Button inside of popup menu
 (function() {
@@ -119,7 +139,7 @@
             if (editGroupInfoButton.innerText.includes("Edit Group Information")) {
                 // Extract the dynamic part from the "Edit Group Information" button's href
                 const dynamicPart = editGroupInfoButton.href.split('/').pop();
-                const newButtonHref = `https://umrah.nusuk.sa/bsp/ExternalAgencies/Groups/createMutamerIntoGroup/${dynamicPart}`;
+                const newButtonHref = `https://umrahmasar.nusuk.sa/bsp/ExternalAgencies/Groups/createMutamerIntoGroup/${dynamicPart}`;
 
                 // Check if the new button with the unique ID already exists
                 if (!document.querySelector(`#${buttonId}`)) {
@@ -179,11 +199,9 @@
             const buttonId = `qa-new-feeding-button-${index}`;
 
             if (editGroupInfoButton.innerText.includes("Edit Group Information")) {
-                console.log(`Processing button with href: ${editGroupInfoButton.href}`); // Debug log
-
                 // Extract the dynamic part from the "Edit Group Information" button's href
                 const dynamicPart = editGroupInfoButton.href.split('/').pop();
-                const newButtonHref = `https://umrah.nusuk.sa/bsp/ExternalAgencies/Groups/EditMuatamerList/${dynamicPart}`;
+                const newButtonHref = `https://umrahmasar.nusuk.sa/bsp/ExternalAgencies/Groups/EditMuatamerList/${dynamicPart}`;
 
                 // Check if the new button with the unique ID already exists
                 if (!document.querySelector(`#${buttonId}`)) {
@@ -201,8 +219,6 @@
 
                     // Insert the new button after the "Edit Group Information" button
                     editGroupInfoButton.insertAdjacentElement('afterend', newButton);
-                } else {
-                    console.log(`Button with ID ${buttonId} already exists`); // Debug log
                 }
             }
         });
@@ -292,13 +308,17 @@
 
     const targetUrlPattern = /GetMuatamerListDetails/; // Specify the URL pattern to check
 
-    // Function to add the "Add" link
+    // Function to add the "Add" and "Edit" links
     function addMtmrLnk() {
         const MtmrLstElement = document.querySelector('.kt-portlet__head-label h3.kt-portlet__head-title');
         if (MtmrLstElement && targetUrlPattern.test(window.location.href)) {
             const xxURL = window.location.href;
-            const newURL = xxURL.replace('GetMuatamerListDetails', 'createMutamerIntoGroup');
-            MtmrLstElement.innerHTML = `<a href="${newURL}">Add</a>`;
+            const addURL = xxURL.replace('GetMuatamerListDetails', 'createMutamerIntoGroup');
+            const editURL = xxURL.replace('GetMuatamerListDetails', 'EditMuatamerList');
+            MtmrLstElement.innerHTML = `
+                <a href="${addURL}">Add</a> |
+                <a href="${editURL}">Edit</a>
+            `;
         }
     }
 
@@ -458,7 +478,7 @@
     'use strict';
 
     // Specify the URL to check
-    const targetUrl = 'https://umrah.nusuk.sa/bsp/ExternalAgencies/Groups/CreateGroup'; // Change this to your target URL
+    const targetUrl = 'https://umrahmasar.nusuk.sa/bsp/ExternalAgencies/Groups/CreateGroup'; // Change this to your target URL
 
     // Function to check if the current URL matches the target URL
     function isTargetUrl() {
@@ -503,6 +523,14 @@
                 const GroupName = document.getElementById('GroupNameEn');
                 if (GroupName) {
                     GroupName.value = 'KH-AMD-SKY-' + getTodayDate();
+                }
+                return;
+            } else if (spanContent === 'SAFREIBADAT ISB') { // AMT KUTBI
+                const GroupName = document.getElementById('GroupNameEn');
+                const Notes = document.getElementById('Notes');
+                if (GroupName) {
+                    GroupName.value = 'SEI-ALMADNI-SKY-' + getTodayDate();
+                    Notes.value = 'Only Visa';
                 }
                 return;
             } else if (spanContent === 'sky pass') { // NOOR KAKI
@@ -576,7 +604,7 @@
     'use strict';
 
     // Check if the current URL matches the desired pattern
-    if (window.location.href.startsWith("https://umrah.nusuk.sa/bsp/ExternalAgencies/Groups/createMutamerIntoGroup/")) {
+    if (window.location.href.startsWith("https://umrahmasar.nusuk.sa/bsp/ExternalAgencies/Groups/createMutamerIntoGroup/")) {
 
         (function() {
             'use strict';
@@ -887,8 +915,8 @@
             magnifierContainer.style.right = '1px';
             magnifierContainer.style.zIndex = '1000';
             magnifierContainer.style.overflow = 'hidden';
-            magnifierContainer.style.width = '500px'; // Adjust width as needed
-            magnifierContainer.style.height = '500px'; // Adjust height as needed
+            magnifierContainer.style.width = '600px'; // Adjust width as needed
+            magnifierContainer.style.height = '600px'; // Adjust height as needed
             magnifierContainer.style.display = 'none'; // Hide initially
             document.body.appendChild(magnifierContainer);
 
@@ -949,4 +977,171 @@
             });
         })();
     }
+})();
+
+// Inserting Delete Row Button in Mutamer List
+(function() {
+    'use strict';
+
+    // Check if the current URL starts with the specified URL
+    const baseUrl = "https://umrahmasar.nusuk.sa/bsp/ExternalAgencies/Groups/GetMuatamerListDetails/";
+    if (!window.location.href.startsWith(baseUrl)) {
+        return; // Exit the function if the URL doesn't match
+    }
+
+    let debounceTimeout;
+
+    // Function to add delete buttons and text areas to the specified cells
+    function addButtons() {
+        const rows = document.querySelectorAll('table tbody tr'); // Select rows in tbody
+
+        rows.forEach((row, index) => {
+            // Skip rows with header cells
+            if (row.querySelector('th')) return;
+
+            // Get the 10th & 12th cell 0-based index
+            const tenthCell = row.cells[9];
+            const twelfthCell = row.cells[11];
+
+            // Check if the text area already exists in the 10th cell
+            if (tenthCell && !tenthCell.querySelector('textarea')) {
+                // Clear existing content in the 10th cell
+                tenthCell.innerHTML = '';
+
+                // Create the text area
+                const textArea = document.createElement('textarea');
+                textArea.style.backgroundColor = 'transparent'; // Set transparent background
+                textArea.style.height = '40px'; // Make the text area take full width
+                textArea.style.overflow = 'hidden'; // Hide scrollbar
+                textArea.style.resize = 'none'; // Prevent resizing
+                textArea.id = `MRZ${index}`; // Unique ID based on row index
+                textArea.className = 'form-control';
+
+                // Add the text area to the 10th cell
+                tenthCell.appendChild(textArea);
+            }
+
+            // Check if the delete button already exists in the 12th cell
+            if (twelfthCell && !twelfthCell.querySelector('.kt-nav__item')) {
+                // Clear existing content in the 12th cell
+                // twelfthCell.innerHTML = '';
+
+                // Create the delete button
+                const delButton = document.createElement('a');
+                delButton.className = 'kt-nav__item';
+                delButton.innerHTML = `<i class="kt-nav__link-icon flaticon2-cross" style="color: black;"></i>`;
+
+                // Add event listener to delete the row
+                delButton.addEventListener('click', function() {
+                    row.remove(); // Removes the row
+                });
+
+                // Add the delete button to the 12th cell
+                twelfthCell.appendChild(delButton);
+            }
+        });
+    }
+
+    // Use event delegation for delete button clicks
+    document.addEventListener('click', function(event) {
+        const delButton = event.target.closest('.kt-nav__item');
+        if (delButton) {
+            const row = delButton.closest('tr');
+            if (row) {
+                row.remove(); // Removes the row
+            }
+        }
+    });
+
+    // Run when the DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        addButtons(); // Run the function initially
+    });
+
+    // Debounced observer
+    const observer = new MutationObserver(function() {
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(() => {
+            addButtons(); // Add buttons and text areas again after changes
+        }, 200); // Adjust the delay as needed
+    });
+
+    // Start observing a more specific part of the document (like the table body)
+    const targetNode = document.querySelector('table tbody'); // Observe tbody for changes
+    if (targetNode) {
+        observer.observe(targetNode, { childList: true, subtree: true });
+    }
+})();
+
+// Function to update the mutamer details based on MRZ input
+(function() {
+    'use strict';
+
+    function extractMRZData(mrz) {
+        if (mrz.length !== 88) return null;
+
+        const mrzPattern = /^.{5}([A-Z<]+)<<([A-Z<]+).{1,40}([A-Z0-9]{9}).{4}(\d{6}).{1}([MF])/;
+        const match = mrz.match(mrzPattern);
+        if (!match) return null;
+
+        const surname = match[1].replace(/</g, ' ').trim();
+        const givenNames = match[2].replace(/</g, ' ').trim();
+        const passportNumber = match[3];
+        const dob = match[4];
+        const gender = match[5] === 'M' ? 'Male' : match[5] === 'F' ? 'Female' : 'Unknown';
+
+        let year = parseInt(`20${dob.substring(0, 2)}`, 10);
+        if (year > new Date().getFullYear()) year -= 100;
+
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const dobFormatted = `${year}-${monthNames[parseInt(dob.substring(2, 4), 10) - 1]}-${dob.substring(4, 6)}`;
+
+        const dobDate = new Date(`${year}-${dob.substring(2, 4)}-${dob.substring(4, 6)}`);
+        let age = new Date().getFullYear() - dobDate.getFullYear();
+        if (new Date() < new Date(new Date().getFullYear(), dobDate.getMonth(), dobDate.getDate())) age--;
+
+        return {
+            name: `${givenNames} ${surname}`,
+            passportNumber: passportNumber,
+            dateOfBirth: dobFormatted,
+            gender: gender,
+            age: age
+        };
+    }
+
+    function updateRowWithData(rowIndex, data) {
+        const rows = document.querySelectorAll('tbody tr');
+        if (rows[rowIndex]) {
+            rows[rowIndex].cells[3].innerText = data.name;
+            rows[rowIndex].cells[5].innerText = data.passportNumber;
+            rows[rowIndex].cells[6].innerText = data.gender;
+            rows[rowIndex].cells[7].innerText = data.dateOfBirth;
+            rows[rowIndex].cells[8].innerText = data.age;
+        }
+    }
+
+    const loggedTextareas = new Set();
+
+    function findMRZTextAreas() {
+        document.querySelectorAll('textarea[id^="MRZ"]').forEach((textarea) => {
+            const rowIndex = parseInt(textarea.id.replace("MRZ", ""), 10);
+            if (!loggedTextareas.has(textarea.id)) {
+                loggedTextareas.add(textarea.id);
+                textarea.addEventListener('input', () => {
+                    const mrzData = extractMRZData(textarea.value);
+                    if (mrzData) updateRowWithData(rowIndex, mrzData);
+                });
+            }
+        });
+    }
+
+    const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            if (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0) findMRZTextAreas();
+        });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+    findMRZTextAreas();
+
 })();

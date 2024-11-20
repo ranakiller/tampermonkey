@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         SPTJetFueled
+// @name         Enhanced Automation for Skypass Portal
 // @namespace    https://skypass.pk/
-// @version      2024-01-10
-// @description  Add a new td tag that displays the days between departure dates
+// @version      1.1
+// @description  This script automates tasks on the Skypass ticket portal, including adding functionality to display days between dates, and streamlining user interaction.
 // @author       Rana Furqan
 // @match        https://skypass.pk/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=skypass.pk

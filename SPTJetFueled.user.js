@@ -30,291 +30,249 @@
     });
 })();
 
-// Function to calculate days between two dates
+// Function to calculate days between dates
 (function() {
     'use strict';
 
     let spanCounter = 1; // Counter to generate unique IDs
 
     function calculateDays(date1, date2) {
-        const oneDay = 24 * 60 * 60 * 1000; // hours*minutes*seconds*milliseconds
+        const oneDay = 24 * 60 * 60 * 1000;
         const firstDate = new Date(date1);
         const secondDate = new Date(date2);
         return Math.round(Math.abs((firstDate.getTime() - secondDate.getTime()) / oneDay));
     }
 
-    function createUniqueSpan(textContent) {
+    function createDaysSpan(textContent) {
         const span = document.createElement('span');
         span.className = 'fw-bold';
         span.style.fontSize = "0.8em";
         span.style.color = "gray";
         span.textContent = textContent;
-        span.id = `unique-span-${spanCounter++}`; // Assign a unique ID
+        span.id = `days-span-${spanCounter++}`; // Assign a unique ID
         return span;
     }
 
-   // Function to find and process the flight dates
     function processFlightDates() {
-        const flightInfo = document.querySelectorAll('.flight_search_sector_info span:nth-child(2)'); // Selecting the third span in each .flight_search_sector_info
+        const flightInfo = document.querySelectorAll('.flight_search_sector_info span:nth-child(2)');
         if (!flightInfo || flightInfo.length < 2) return;
 
-       // Extract departure and return dates
         const departureDate = flightInfo[0].textContent.trim();
         const returnDate = flightInfo[1].textContent.trim();
-
-       // Calculate days between departure and return dates
         const days = calculateDays(departureDate, returnDate);
 
-       // Create a new span with the calculated days
         if (days > 1) {
-            const daysSpan = createUniqueSpan(`${days}D`);
-
-           // Find the second occurrence of .flight_search_destination and append the new span
             const destinationDivs = document.querySelectorAll('.flight_search_destination');
             if (destinationDivs.length >= 2) {
                 const secondDestinationDiv = destinationDivs[1];
-                secondDestinationDiv.appendChild(daysSpan);
+                // Check if a span with the ID already exists
+                if (!secondDestinationDiv.querySelector(`[id^="days-span-"]`)) {
+                    const daysSpan = createDaysSpan(`${days}D`);
+                    secondDestinationDiv.appendChild(daysSpan);
+                }
             }
         }
     }
 
-   // Function to calculate days between two or four dates
     function processAllDates() {
-       // Find all table cells with the dates
         const cells = document.querySelectorAll("td.text-center span.fw-bold:first-of-type");
         for (const cell of cells) {
-           // Extract the dates from the cell
             const text = cell.textContent.trim();
             const matches = text.match(/(\d{2}\s[A-Za-z]+\s\d{4})/g);
 
-           // If there are dates, calculate the difference
             if (matches && matches.length >= 2) {
                 const date1 = new Date(matches[0]);
                 const date2 = new Date(matches[1]);
+                let diff;
 
-               // If there are four dates, calculate the difference between the 2nd and 3rd dates
                 if (matches.length >= 4) {
                     const date3 = new Date(matches[2]);
                     const date4 = new Date(matches[3]);
-                    const diff = Math.floor((date3 - date2) / (1000 * 60 * 60 * 24));
+                    diff = Math.floor((date3 - date2) / (1000 * 60 * 60 * 24));
 
-                   // Create a new span element with the number of days if the difference is greater than 1
-                    if (diff > 1) {
-                        const days = createUniqueSpan(`${diff}Days`);
-                       // Insert the new span element after the existing span
+                    if (diff > 1 && !cell.parentNode.querySelector(`[id^="days-span-"]`)) {
+                        const days = createDaysSpan(`${diff}Days`);
                         cell.parentNode.insertBefore(days, cell.nextSibling);
                     }
                 } else {
-                   // If there are only two dates, calculate the difference between them
-                    const diff = Math.floor((date2 - date1) / (1000 * 60 * 60 * 24));
+                    diff = Math.floor((date2 - date1) / (1000 * 60 * 60 * 24));
 
-                   // Create a new span element with the number of days if the difference is greater than 1
-                    if (diff > 1) {
-                        const days = createUniqueSpan(`${diff}Days`);
-                       // Insert the new span element after the existing span
+                    if (diff > 1 && !cell.parentNode.querySelector(`[id^="days-span-"]`)) {
+                        const days = createDaysSpan(`${diff}Days`);
                         cell.parentNode.insertBefore(days, cell.nextSibling);
                     }
                 }
             }
         }
 
-       // Call the function to process the flight dates
         processFlightDates();
     }
 
-   // Call the function to process all dates
-    processAllDates();
-})();
+    function observeDOM() {
+        const targetNode = document.body;
+        const config = { childList: true, subtree: true };
 
-// This Function for making whatsapp message for all the dates for same sector in airline header
-(function() {
-    'use strict';
-
-   // Wait for the page to fully load
-    window.addEventListener('load', function() {
-       // Select all target divs within tr elements with class 'airline' and a 'data-airline' attribute
-        const targetDivs = document.querySelectorAll('tr.airline[data-airline] td .d-flex');
-
-       // Loop through each target div and add a textarea
-        targetDivs.forEach((targetDiv, index) => {
-           // Create the textarea element
-            const textarea = document.createElement('textarea');
-            textarea.style.width = '50%'; // Adjust the width as needed
-            textarea.style.marginLeft = '10px'; // Add some margin to the left
-
-           // Get the parent element's background and text colors
-            const parentStyles = window.getComputedStyle(targetDiv.parentElement);
-            const backgroundColor = parentStyles.backgroundColor;
-            const color = parentStyles.color;
-
-           // Apply the colors to the textarea
-            textarea.style.backgroundColor = backgroundColor; // Set the background color to match the parent
-            textarea.style.color = color; // Set the text color to match the parent
-            textarea.style.border = '1px solid #ccc'; // Optional: add a border similar to the page's design
-            textarea.className = 'border-light text-dark-1 h-40 form-control';
-
-           // Find the airline code from flight number from the next row
-            const nextRow = targetDiv.closest('tr').nextElementSibling;
-            let airlineCode = 'unknown-flight';
-            if (nextRow) {
-                const flightCell = nextRow.querySelector('.flight-number');
-                if (flightCell) {
-                    const flightNumbers = flightCell.innerText.trim().split('\n');
-                    airlineCode = flightNumbers[0] ? flightNumbers[0].substring(0, 2) : 'xx';
+        const callback = (mutationsList) => {
+            for (const mutation of mutationsList) {
+                if (mutation.type === 'childList') {
+                    // Re-run the function if any spans are missing
+                    const missingSpans = document.querySelectorAll('[id^="days-span-"]').length === 0;
+                    if (missingSpans) {
+                        processAllDates();
+                    }
                 }
             }
+        };
 
-           // Get the text from the h4 element within the target div and remove dashes
-            const h4Text = targetDiv.querySelector('h4') ? targetDiv.querySelector('h4').innerText : 'unknown';
+        const observer = new MutationObserver(callback);
+        observer.observe(targetNode, config);
+    }
 
-           // Create a unique ID for the textarea using the flight number and the h4 text
-            textarea.id = `${airlineCode}-${h4Text.replace(/-/g, '')}-Head`;
-           // textarea.value = `${h4Text} on ${flightNumber}\n\n`;
+    processAllDates(); // Initial execution
+    observeDOM(); // Start observing for changes
+})();
 
-           // Insert the textarea after the target div
-            targetDiv.parentElement.insertBefore(textarea, targetDiv.nextSibling);
+// Putting TextAreas and creating Whatsapp Message text
+(function () {
+    'use strict';
 
-           // Adjust the styling for alignment
-            targetDiv.style.width = '100%'; // Ensure the div takes the full width
+    // Helper function to create and style a textarea
+    function createStyledTextarea(parent, id, text = '', styles = {}) {
+        let textarea = document.getElementById(id);
+        if (!textarea) {
+            textarea = document.createElement('textarea');
+            textarea.id = id;
+            parent.appendChild(textarea);
+        }
+        Object.assign(textarea.style, {
+            width: styles.width || '100%',
+            height: styles.height || '100px',
+            backgroundColor: styles.backgroundColor || '#f5f5f5',
+            color: styles.color || '#333',
+            border: styles.border || '1px solid #ccc',
+            marginLeft: styles.marginLeft || '0',
         });
-    }, false);
-})();
+        textarea.className = 'border-light text-dark-1 h-40 form-control';
+        textarea.value = text;
+        return textarea;
+    }
 
-// Function for making text for Whatsapp messaging.
-(function() {
-    'use strict';
+    // Header processing function
+    function processHeaders(container, headerTextAreas) {
+        const airlineHeaders = document.querySelectorAll('tr.airline td .d-flex');
 
-   // Wait until the page is fully loaded
-    window.addEventListener('load', function() {
-       // Select the container with id "colcontent"
-        const container = document.getElementById('colcontent');
+        airlineHeaders.forEach((targetDiv) => {
+            const h4Text = targetDiv.querySelector('h4') ? targetDiv.querySelector('h4').innerText.trim() : 'unknown';
+            const nextRow = targetDiv.closest('tr').nextElementSibling;
+            const airlineCode = nextRow?.querySelector('.flight-number')?.innerText.trim().substring(0, 2) || 'xx';
 
-        if (container) {
-           // Select all the rows within the container
-            const rows = container.querySelectorAll('tr');
+            const id = `${airlineCode}-${h4Text.replace(/\s+/g, '-')}-Head`;
 
-            let currentSectorH = '';
-            let rowIndex = 0;
-
-           // Identify airline header rows
-            const airlineHeaders = document.querySelectorAll('tr.airline td .d-flex');
-
-           // Object to hold textarea content for each header
-            const headerTextAreas = {};
-
-           // Function to update the header textarea
-            function updateHeaderTextArea(id, text) {
-                let headerTextArea = document.getElementById(id);
-                if (!headerTextArea) {
-                    headerTextArea = document.createElement('textarea');
-                    headerTextArea.className = 'border-light text-dark-1 h-40 form-control';
-                    container.prepend(headerTextArea); // Add the header textarea at the top of the container
-                }
-                headerTextArea.style.width = '100%'; // Adjust width as needed
-                headerTextArea.style.height = '200px'; // Adjust height as needed
-                headerTextArea.style.backgroundColor = '#f5f5f5'; // Optional: set background color
-                headerTextArea.style.color = '#333'; // Optional: set text color
-                headerTextArea.style.border = '1px solid #ccc'; // Optional: add a border similar to the page's design
-                headerTextArea.innerHTML = text;
+            if (!(id in headerTextAreas)) {
+                headerTextAreas[id] = ''; // Initialize text storage for this header
             }
 
-           // Loop through each row
-            rows.forEach((row) => {
-               // Check if the row is an airline header
-                const airlineHeader = Array.from(airlineHeaders).find(div => div.closest('tr') === row);
+            createStyledTextarea(targetDiv.parentElement, id, headerTextAreas[id], {
+                width: '50%',
+                marginLeft: '10px',
+                backgroundColor: window.getComputedStyle(targetDiv.parentElement).backgroundColor,
+                color: window.getComputedStyle(targetDiv.parentElement).color,
+            });
+        });
+
+        return headerTextAreas;
+    }
+
+    // Helper function to process individual rows
+    function processRow(row, rowIndex, currentHeaderId, headerTextAreas, processedRows) {
+        const cells = row.getElementsByTagName('td');
+        if (cells.length < 6) return;
+
+        const durationElement = row.querySelector('span[id^="days-span"]');
+        const duration = durationElement ? durationElement.innerText.trim() : '';
+
+        const dates = cells[0].querySelector('span.fw-bold')?.innerText.trim().split('\n') || [];
+        const flightNumbers = cells[1].querySelector('.flight-number')?.innerText.trim().split('\n') || [];
+        const routes = cells[2].querySelector('span.fw-bold')?.innerText.trim().split('\n') || [];
+        const times = cells[3].querySelector('span.fw-bold')?.innerText.trim().split('\n') || [];
+        const price = cells[6].querySelector('.price-format span:nth-child(2)')?.innerText.trim() || '';
+
+        let numericPrice = Number(price.replace(/,/g, ''));
+        let textBoxValue = `*FARE ${numericPrice}*`;
+
+        if (flightNumbers.length > 1) {
+            textBoxValue += ` \`${duration}\``;
+        }
+
+        if (flightNumbers.length > 0 && dates.length > 0 && routes.length > 0 && times.length > 0) {
+            for (let i = 0; i < flightNumbers.length; i++) {
+                const flight = flightNumbers[i]?.replace(/\s+/g, '') || '';
+                const date = dates[i]?.replace(/\s+/g, '').replace(/\d{4}/g, '').toUpperCase() || '';
+                const route = routes[i]?.replace(/\s+/g, '').replace(/-/g, '') || '';
+                const time = times[i]?.replace(/:/g, '').replace(/-/g, ' ') || '';
+
+                textBoxValue += `\n\`\`\`${flight} ${date} ${route} ${time}\`\`\``;
+            }
+        }
+
+        let textArea = cells[5].querySelector('textarea');
+        if (!textArea) {
+            textArea = createStyledTextarea(cells[5], `${currentHeaderId}-r${rowIndex}`);
+        }
+
+        textArea.value = textBoxValue;
+
+        // Append to the header's textarea content
+        if (currentHeaderId && headerTextAreas[currentHeaderId] !== undefined) {
+            headerTextAreas[currentHeaderId] += textBoxValue + '\n\n';
+
+            // Update the corresponding header textarea
+            const headerTextArea = document.getElementById(currentHeaderId);
+            if (headerTextArea) {
+                headerTextArea.value = headerTextAreas[currentHeaderId];
+            }
+        }
+
+        processedRows.add(row);
+    }
+
+    window.addEventListener('load', function () {
+        const container = document.getElementById('colcontent');
+        if (!container) return;
+
+        const processedRows = new Set();
+        let headerTextAreas = {};
+
+        function processRows() {
+            const rows = container.querySelectorAll('tr');
+            let currentHeaderId = '';
+
+            rows.forEach((row, index) => {
+                const airlineHeader = Array.from(document.querySelectorAll('tr.airline td .d-flex')).find(
+                    (div) => div.closest('tr') === row
+                );
+
                 if (airlineHeader) {
-                    const airlineHeaderText = airlineHeader.querySelector('h4') ? airlineHeader.querySelector('h4').innerText.trim() : 'unknown';
-                    currentSectorH = airlineHeaderText.replace(/\s+/g, '-').replace(/-/g, '');
-                   // console.log (currentSectorH)
-                    rowIndex = 0; // Reset row index for the new airline header
-
-                   // Reset the header text area for the new airline
-                    headerTextAreas[currentSectorH] = '';
-                }
-
-               // Skip airline header rows when adding text areas
-                if (!airlineHeader) {
-                   // Increment the row index for the current airline
-                    rowIndex++;
-
-                   // Get the cells
-                    const cells = row.getElementsByTagName('td');
-
-                    if (cells.length >= 6) {
-                       // Find the span with an ID starting with "unique-span"
-                        const durationElement = row.querySelector('span[id^="unique-span"]');
-                        const duration = durationElement ? durationElement.innerText.trim() : '';
-
-                       // Extract the required data
-                        const dates = cells[0].querySelector('span.fw-bold').innerText.trim().split('\n');
-                        const flightNumbers = cells[1].querySelector('.flight-number').innerText.trim().split('\n');
-                        const routes = cells[2].querySelector('span.fw-bold').innerText.trim().split('\n');
-                        const times = cells[3].querySelector('span.fw-bold').innerText.trim().split('\n');
-                        const price = cells[6].querySelector('.price-format span:nth-child(2)').innerText.trim();
-
-                       // Construct the text area value
-                        let numericPrice = Number(price.replace(/,/g, ''));
-                        let textBoxValue = `*FARE ${numericPrice + 0}*`;
-
-                       // Add duration if there is more than one flight number
-                        if (flightNumbers.length > 1) {
-                            textBoxValue += ` \`${duration}\``;
-                        }
-
-                       // Ensure that the arrays have at least one element
-                        if (flightNumbers.length > 0 && dates.length > 0 && routes.length > 0 && times.length > 0) {
-                           // Loop through the arrays and add the formatted values
-                            for (let i = 0; i < flightNumbers.length; i++) {
-                                const flight = flightNumbers[i]?.replace(/\s+/g, '') || '';
-                                const date = dates[i]?.replace(/\s+/g, '').replace(/2024/g, '').toUpperCase() || '';
-                                const route = routes[i]?.replace(/\s+/g, '').replace(/-/g, '') || '';
-                                const time = times[i]?.replace(/:/g, '').replace(/-/g, ' ') || '';
-
-                                textBoxValue += `\n\`\`\`${flight} ${date} ${route} ${time}\`\`\``;
-                            }
-                        }
-
-                       // Find or create a text area in the sixth cell
-                        let textArea = cells[5].querySelector('textarea');
-                        if (!textArea) {
-                            textArea = document.createElement('textarea');
-                            textArea.className = 'border-light text-dark-1 h-40 form-control';
-                            cells[5].appendChild(textArea);
-                        }
-                        textArea.style.width = '100%'; // Adjust width as needed
-                        textArea.style.height = '100px'; // Adjust height as needed
-                        textArea.innerHTML = textBoxValue; // Set the formatted value
-
-                       // Get the parent element's background and text colors
-                        const parentStyles = window.getComputedStyle(cells[5]);
-                        const backgroundColor = parentStyles.backgroundColor;
-                        const color = parentStyles.color;
-
-                       // Apply the colors to the textarea
-                        textArea.style.backgroundColor = backgroundColor; // Set the background color to match the parent
-                        textArea.style.color = color; // Set the text color to match the parent
-                        textArea.style.border = '1px solid #ccc'; // Optional: add a border similar to the page's design
-
-                       // Extract the first two characters from the first flight number
-                        const flightPrefix = flightNumbers[0] ? flightNumbers[0].substring(0, 2) : 'xx';
-                       // console.log (flightPrefix)
-
-                       // Set the unique ID based on the airline header and row index
-                        const textAreaId = `${flightPrefix}-${currentSectorH}-r${rowIndex}`;
-                        textArea.id = textAreaId;
-
-                       // Update the header textarea content
-                        if (!headerTextAreas[currentSectorH]) {
-                            headerTextAreas[currentSectorH] = '';
-                        }
-                        headerTextAreas[currentSectorH] += textBoxValue + '\n\n';
-
-                       // Update the header textarea for the current airline
-                        updateHeaderTextArea(`${flightPrefix}-${currentSectorH}-Head`, headerTextAreas[currentSectorH]);
+                    const h4Text = airlineHeader.querySelector('h4')?.innerText.trim() || 'unknown';
+                    const nextRow = airlineHeader.closest('tr').nextElementSibling;
+                    const airlineCode = nextRow?.querySelector('.flight-number')?.innerText.trim().substring(0, 2) || 'xx';
+                    currentHeaderId = `${airlineCode}-${h4Text.replace(/\s+/g, '-')}-Head`;
+                } else {
+                    if (!processedRows.has(row)) {
+                        processRow(row, index, currentHeaderId, headerTextAreas, processedRows);
                     }
                 }
             });
         }
+
+        const observer = new MutationObserver(() => {
+            processHeaders(container, headerTextAreas);
+            processRows();
+        });
+
+        observer.observe(container, { childList: true, subtree: true });
+        headerTextAreas = processHeaders(container, headerTextAreas);
+        processRows();
     });
 })();
 

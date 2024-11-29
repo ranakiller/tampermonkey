@@ -1,10 +1,12 @@
 // ==UserScript==
 // @name         Nusuk on Steroids
-// @namespace    https://umrahmasar.nusuk.sa/
-// @version      210824
+// @namespace    nusuk_on_steroids
+// @version      1.52
 // @description  Reload Nusuk Tab, Select 50Rows, Putting Custom Buttons, Clicking Add Mutamer Repetedly, Extracting Mutamers & Groups Details, Groups Creations & Feeding Functions
+// @downloadURL	 https://github.com/ranakiller/tampermonkey/raw/refs/heads/main/nusuk_on_steroids.user.js
+// @updateURL    https://github.com/ranakiller/tampermonkey/raw/refs/heads/main/nusuk_on_steroids.user.js
 // @author       Furqan Rana
-// @match        https://umrahmasar.nusuk.sa/bsp/ExternalAgencies/Groups/*
+// @match        https://umrahmasar.nusuk.sa/bsp/ExternalAgencies/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=nusuk.sa
 // @grant        none
 // ==/UserScript==
@@ -18,6 +20,17 @@
 
     // Set the interval to reload every (360000 milliseconds / 6 minutes)
     setInterval(reloadSecondURL, 360000);
+})();
+
+// Function to Redirects from Dashboard to Groups page
+(function() {
+    'use strict';
+
+    // Check if the current URL is the dashboard URL
+    if (window.location.href === "https://umrahmasar.nusuk.sa/bsp/ExternalAgencies/Dashboard") {
+        // Redirect to the groups page
+        window.location.href = "https://umrahmasar.nusuk.sa/bsp/ExternalAgencies/Groups/Index";
+    }
 })();
 
 // Function to select option value 50 from the drop-down
@@ -1080,7 +1093,7 @@
     function extractMRZData(mrz) {
         if (mrz.length !== 88) return null;
 
-        const mrzPattern = /^.{5}([A-Z<]+)<<([A-Z<]+).{1,40}([A-Z0-9]{9}).{4}(\d{6}).{1}([MF])/;
+        const mrzPattern = /^.{5}([A-Z]{1,39})<<([A-Z< ]+)([A-Z0-9]{9}).{4}(\d{6}).{1}([MF])/;
         const match = mrz.match(mrzPattern);
         if (!match) return null;
 
@@ -1144,4 +1157,49 @@
     observer.observe(document.body, { childList: true, subtree: true });
     findMRZTextAreas();
 
+})();
+
+// Automatically clicks the confirm button when it appears.
+(function () {
+    'use strict';
+
+    // Function to click buttons if they exist
+    function clickButtons() {
+        // Button with div inside
+        const buttonWithDiv = document.querySelector('button.swal2-confirm.swal2-styled #confirmBtn');
+        if (buttonWithDiv) {
+            buttonWithDiv.click();
+        }
+
+        // Button with direct text "OK"
+        const buttonWithTextOK = Array.from(document.querySelectorAll('button.swal2-confirm.swal2-styled')).find(
+            btn => btn.textContent.trim() === "OK"
+        );
+        if (buttonWithTextOK) {
+            buttonWithTextOK.click();
+        }
+
+        // Button with direct text "Ok"
+        const buttonWithTextOk = Array.from(document.querySelectorAll('button.swal2-confirm.swal2-styled')).find(
+            btn => btn.textContent.trim() === "Ok"
+        );
+        if (buttonWithTextOk) {
+            buttonWithTextOk.click();
+        }
+    }
+
+    // Observe changes to the DOM
+    const observer = new MutationObserver((mutationsList, observer) => {
+        for (const mutation of mutationsList) {
+            if (mutation.type === 'childList' || mutation.type === 'attributes') {
+                clickButtons();
+            }
+        }
+    });
+
+    // Start observing the document body
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Initial check in case the buttons are already present
+    clickButtons();
 })();

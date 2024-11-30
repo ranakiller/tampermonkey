@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         TNT Enhanced Automation
 // @namespace    tnt_enhancement
-// @version      0.1
+// @version      0.2
 // @description  This script automates tasks on the Skypass ticket portal, including adding functionality to display days between dates, and streamlining user interaction.
-// @downloadURL	 https://github.com/ranakiller/tampermonkey/raw/refs/heads/main/tnt_enhancement.js
-// @updateURL    https://github.com/ranakiller/tampermonkey/raw/refs/heads/main/tnt_enhancement.js
+// @downloadURL	 https://github.com/ranakiller/tampermonkey/raw/refs/heads/main/tnt_enhancement.user.js
+// @updateURL    https://github.com/ranakiller/tampermonkey/raw/refs/heads/main/tnt_enhancement.user.js
 // @author       Rana Furqan
 // @match        https://travelnetwork.pk/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=travelnetwork.pk

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nusuk on Steroids
 // @namespace    nusuk_on_steroids
-// @version      291124
+// @version      0312242358
 // @description  Reload Nusuk Tab, Select 50Rows, Putting Custom Buttons, Clicking Add Mutamer Repetedly, Extracting Mutamers & Groups Details, Groups Creations & Feeding Functions
 // @downloadURL	 https://github.com/ranakiller/tampermonkey/raw/refs/heads/main/nusuk_on_steroids.user.js
 // @updateURL    https://github.com/ranakiller/tampermonkey/raw/refs/heads/main/nusuk_on_steroids.user.js

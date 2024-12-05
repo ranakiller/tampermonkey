@@ -137,37 +137,57 @@
     observeDOM(); // Start observing for changes
 })();
 
-// Putting TextAreas and creating Whatsapp Message text
+// Put Copy button in each row to copy whatsapp formatted text
 (function () {
     'use strict';
 
-    // Function to create or update a textarea in a cell
-    function createOrUpdateTextarea(parent, id, text = '', styles = {}) {
-        let textarea = document.getElementById(id);
-        if (!textarea) {
-            // Create the textarea if it doesn't exist
-            textarea = document.createElement('textarea');
-            textarea.id = id;
-            parent.appendChild(textarea);
+    // Function to create or update a copy button in a cell
+    function createOrUpdateCopyButton(parent, id, text = '', styles = {}) {
+        let button = document.getElementById(id);
+        if (!button) {
+            // Create the button if it doesn't exist
+            button = document.createElement('button');
+            button.id = id;
+            button.textContent = 'Copy';
+            button.className = 'copy-button';
+            parent.appendChild(button);
         }
-        Object.assign(textarea.style, {
-            width: styles.width || '70px',
-            height: styles.height || '20px',
-            fontSize: styles.fontSize || '10px',
-            overFlow: styles.overflow = 'hidden',
-            margin: styles.padding = '2px',
-            reSize: styles.resize = 'none',
+
+        Object.assign(button.style, {
+            padding: styles.padding || '5px 10px',
+            fontSize: styles.fontSize || '12px',
+            cursor: 'pointer',
+            backgroundColor: styles.backgroundColor || '#007bff',
+            color: styles.color || '#fff',
+            border: styles.border || 'none',
+            borderRadius: styles.borderRadius || '4px',
             ...styles,
         });
-        textarea.className = 'form-control';
-        textarea.value = text; // Insert the text (this could be the WhatsApp message or any other text)
-        return textarea;
+
+        // Attach the copy functionality
+        button.onclick = () => {
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    // Change button text and color to indicate success
+                    button.textContent = 'Done';
+                    button.style.color = 'black';
+                    button.style.backgroundColor = 'lightgreen';
+
+                    // Revert back to original state after 1 seconds
+                    setTimeout(() => {
+                        button.textContent = 'Copy';
+                        button.style.backgroundColor = styles.backgroundColor || '#007bff';
+                    }, 1000);
+                })
+                .catch(err => console.error('Failed to copy text: ', err));
+        };
+
+        return button;
     }
 
-    // Function to generate the WhatsApp message text
+    // Function to generate the WhatsApp message text (preserved original logic)
     function generateWhatsAppMessage(row, rowIndex) {
         const cells = row.getElementsByTagName('td');
-        // Ensure the row has enough cells
         if (cells.length < 7) {
             return '';
         }
@@ -216,33 +236,26 @@
         let fourthTime = timeCell[4] || 'N/A';
 
         // WhatsApp message format
-        // Initialize the message with price
         let message = `*FARE ${priceCell}*`;
 
-        // Add duration only if available
         if (duration !== 'N/A') {
             message += ` \`${duration}\``;
         }
 
-        // Add the first line (always include the first date details)
         message += `\n\`\`\`${firstFlight.replace(' ', '')} ${formatDate(firstDate)} ${replaceCityNamesWithIATA(firstRoute).replace(/\s+/g, '')} ${firstTime}${secondTime}\`\`\``;
 
-        // Handle the second line logic
         if (secondDate === 'N/A') {
-            // If second date is missing, use first date for second line details
-            // Ensure second flight, route, and times are valid before adding the second line
             if (secondFlight !== 'N/A' || secondRoute !== 'N/A' || thirdTime !== 'N/A' || fourthTime !== 'N/A') {
                 message += `\n\`\`\`${secondFlight.replace(' ', '')} ${formatDate(firstDate)} ${replaceCityNamesWithIATA(secondRoute).replace(/\s+/g, '')} ${thirdTime}${fourthTime}\`\`\``;
             }
         } else {
-            // If second date is available, add the second line normally
             message += `\n\`\`\`${secondFlight.replace(' ', '')} ${formatDate(secondDate)} ${replaceCityNamesWithIATA(secondRoute).replace(/\s+/g, '')} ${thirdTime}${fourthTime}\`\`\``;
         }
 
         return message;
     }
 
-    // Function to process and append WhatsApp message to a row
+    // Function to process and append a copy button to a row
     function processRow(row, rowIndex, isHeaderRow = false) {
         const message = generateWhatsAppMessage(row, rowIndex);
         if (!message) {
@@ -251,10 +264,10 @@
 
         const cells = row.getElementsByTagName('td');
         const targetCell = isHeaderRow ? cells[-1] : cells[5]; // Adjust target cell for header rows
-        createOrUpdateTextarea(targetCell, `textarea-${rowIndex + 1}`, message);
+        createOrUpdateCopyButton(targetCell, `copy-button-${rowIndex + 1}`, message);
     }
 
-    // Function to process the table rows and add textareas
+    // Function to process the table rows and add copy buttons
     function processTableRows() {
         const rows = document.querySelectorAll('tr.main_click, thead tr'); // Include header rows as well
         if (rows.length === 0) {
@@ -262,7 +275,6 @@
         }
 
         rows.forEach((row, index) => {
-            // Check if the row is a header (assuming a specific class or identifier)
             const isHeaderRow = row.classList.contains('thead tr');
             processRow(row, index, isHeaderRow);
         });
@@ -285,85 +297,279 @@
 
 })();
 
-// put text areas in header rows
+// Put Copy Buttons for header rows
 (function () {
     'use strict';
 
-    // Function to add a single textarea at the end of each header row
-    function addTextareasToHeaderRows() {
-        // Select all header rows within the thead
-        const headerRows = document.querySelectorAll('.header-row tr');
-
-        if (headerRows.length > 0) {
-            headerRows.forEach(row => {
-                // Add a single textarea at the end of the row if not already present
-                const lastCell = row.lastElementChild; // Get the last cell in the row
-                if (lastCell && !lastCell.querySelector('textarea')) {
-                    const textarea = document.createElement('textarea');
-                    textarea.style.height = '30px';
-                    textarea.style.overflow = 'hidden';
-                    textarea.style.resize = 'none';
-                    textarea.style.padding = '2px';
-                    textarea.className = 'form-control';
-
-                    // Append the textarea at the end of the row
-                    lastCell.appendChild(textarea);
-                }
-            });
-        } else {
-            console.error('No header rows found.');
+    // Function to generate the WhatsApp message text (copied from your logic)
+    function generateWhatsAppMessage(row, rowIndex) {
+        const cells = row.getElementsByTagName('td');
+        if (cells.length < 7) {
+            return '';
         }
-    }
 
-    // Function to merge seat text into header textareas
-    function mergeSeatTextsIntoHeaders() {
-        const headerRows = document.querySelectorAll('.header-row tr');
-        const allRows = document.querySelectorAll('tr'); // Select all rows in the table
+        function formatDate(date) {
+            const [day, month, year] = date.split('-');
+            const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+            return `${day}${monthNames[parseInt(month, 10) - 1]}`;
+        }
 
-        if (headerRows.length > 0) {
-            let headerIndex = 0;
+        const cityToIATA = {
+            // "Dadu": "DDU", "Bhagatanwala": "BHW", "Bannu": "BNP",
+        };
 
-            // Iterate through all rows
-            for (let i = 0; i < allRows.length; i++) {
-                const row = allRows[i];
-
-                // Check if the row is a header row
-                if (row.matches('.header-row tr')) {
-                    headerIndex = i; // Mark the current header row index
-                } else if (i > headerIndex) {
-                    // It's a seat detail row
-                    const seatTextarea = row.querySelector('textarea'); // Seat row textarea
-                    const headerTextarea = allRows[headerIndex].querySelector('textarea'); // Header row textarea
-
-                    if (seatTextarea && headerTextarea) {
-                        // Merge the seat text into the header textarea
-                        const seatText = seatTextarea.value.trim();
-                        if (seatText) {
-                            const currentHeaderText = headerTextarea.value.trim();
-                            headerTextarea.value = currentHeaderText
-                                ? `${currentHeaderText}\n\n${seatText}`
-                                : seatText;
-                        }
-                    }
-                }
+        function replaceCityNamesWithIATA(text) {
+            let result = text;
+            for (const [city, iata] of Object.entries(cityToIATA)) {
+                const regex = new RegExp(`\\b${city}\\b`, "gi");
+                result = result.replace(regex, iata);
             }
+            return result;
         }
+
+        const dateCell = cells[0].textContent.split('\n').map(item => item.trim());
+        const flightCell = cells[1].textContent.split('\n').map(item => item.trim());
+        const routeCell = cells[2].textContent.split('\n').map(item => item.trim());
+        const timeCell = cells[3].textContent.split('\n').map(item => item.trim().replace(' ', ''));
+        const priceCell = cells[6].textContent.trim();
+
+        let firstDate = dateCell[1] || 'N/A';
+        let secondDate = dateCell[2] || 'N/A';
+        let duration = dateCell.find(item => item.toLowerCase().includes('nts')) || 'N/A';
+        let firstFlight = flightCell[1] || 'N/A';
+        let secondFlight = flightCell[2] || 'N/A';
+        let firstRoute = routeCell[1] || 'N/A';
+        let secondRoute = routeCell[2] || 'N/A';
+        let firstTime = timeCell[1] || 'N/A';
+        let secondTime = timeCell[2] || 'N/A';
+        let thirdTime = timeCell[3] || 'N/A';
+        let fourthTime = timeCell[4] || 'N/A';
+
+        let message = `*FARE ${priceCell}*`;
+        if (duration !== 'N/A') {
+            message += ` \`${duration}\``;
+        }
+        message += `\n\`\`\`${firstFlight.replace(' ', '')} ${formatDate(firstDate)} ${replaceCityNamesWithIATA(firstRoute).replace(/\s+/g, '')} ${firstTime}${secondTime}\`\`\``;
+        if (secondDate === 'N/A') {
+            if (secondFlight !== 'N/A' || secondRoute !== 'N/A' || thirdTime !== 'N/A' || fourthTime !== 'N/A') {
+                message += `\n\`\`\`${secondFlight.replace(' ', '')} ${formatDate(firstDate)} ${replaceCityNamesWithIATA(secondRoute).replace(/\s+/g, '')} ${thirdTime}${fourthTime}\`\`\``;
+            }
+        } else {
+            message += `\n\`\`\`${secondFlight.replace(' ', '')} ${formatDate(secondDate)} ${replaceCityNamesWithIATA(secondRoute).replace(/\s+/g, '')} ${thirdTime}${fourthTime}\`\`\``;
+        }
+        return message;
     }
 
-    // Wait for the header rows to be available
-    function waitForHeaderRows() {
-        const observer = new MutationObserver(() => {
-            const headerRows = document.querySelectorAll('.header-row tr');
-            if (headerRows.length > 0) {
+    // Function for the header row copy button
+    function createHeaderCopyButton(headerRow, headerIndex, rows) {
+        const headerCell = headerRow.lastElementChild;
+        const button = document.createElement('button');
+        button.textContent = 'Copy All flights of this Sector';
+        button.style.backgroundColor = 'white';
+        button.style.color = 'blue';
+        button.style.padding = '5px 10px';
+        button.style.border = '1px solid blue';
+        button.style.cursor = 'pointer';
+
+        button.onclick = () => {
+            const messages = [];
+            for (let i = headerIndex + 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (row.matches('.header-row tr')) break; // Stop at the next header
+                const message = generateWhatsAppMessage(row, i);
+                if (message) messages.push(message);
+            }
+
+            const fullMessage = messages.join('\n\n');
+            navigator.clipboard.writeText(fullMessage).then(() => {
+                button.style.color = 'black';
+                button.style.backgroundColor = 'lightgreen';
+                setTimeout(() => {
+                    button.style.backgroundColor = 'white';
+                }, 1000);
+            }).catch(err => console.error('Failed to copy text: ', err));
+        };
+
+        headerCell.appendChild(button);
+    }
+
+    // Main function to initialize header and row buttons
+    function processTable() {
+        const rows = document.querySelectorAll('tr');
+        let headerIndex = -1;
+
+        rows.forEach((row, index) => {
+            if (row.matches('.header-row tr')) {
+                createHeaderCopyButton(row, index, rows);
+                headerIndex = index;
+            }
+        });
+    }
+
+    // Wait for the table rows to be available and then process them
+    function waitForRows() {
+        const observer = new MutationObserver((mutations, observer) => {
+            const rows = document.querySelectorAll('tr');
+            if (rows.length > 0) {
                 observer.disconnect();
-                addTextareasToHeaderRows();
-                mergeSeatTextsIntoHeaders();
+                processTable();
             }
         });
 
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    // Start observing the DOM
-    waitForHeaderRows();
+    waitForRows();
 })();
+
+// Find the maximum number of adults allowed for booking seats
+(function () {
+    'use strict';
+
+    // Check if the current URL matches the desired pattern
+    const currentURL = window.location.href;
+    if (!currentURL.startsWith('https://travelnetwork.pk/admin/booking/create/')) {
+        return; // Exit the function if the URL doesn't match
+    }
+
+    // Function to create an iframe and load the target page
+    function createIframe(url) {
+        return new Promise((resolve) => {
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = url;
+            document.body.appendChild(iframe);
+            iframe.onload = () => resolve(iframe);
+        });
+    }
+
+    // Function to set adults to 500, click "Confirm Seats," and extract popup text
+    async function checkSeats(iframe) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        const adultInput = iframe.contentDocument.querySelector('#adults');
+        const confirmButton = iframe.contentDocument.querySelector('.btn.cust_btnn.bg_blue.rounded.text-white.btn-block');
+
+        if (!adultInput || !confirmButton) {
+            return "Input fields or button not found";
+        }
+
+        adultInput.value = 500;
+        const inputEvent = new Event('input', { bubbles: true });
+        adultInput.dispatchEvent(inputEvent);
+
+        confirmButton.click();
+
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const popup = iframe.contentDocument.querySelector('#swal2-content');
+                if (popup) {
+                    const match = popup.innerText.match(/\d+/); // Extract the first number
+                    resolve(match ? match[0] : '0');
+                } else {
+                    resolve("Popup not found");
+                }
+            }, 1000); // Adjust delay as necessary
+        });
+    }
+
+    async function findSeats(url) {
+        const iframe = await createIframe(url);
+        const extractedNumber = await checkSeats(iframe);
+
+        document.body.removeChild(iframe); // Clean up
+
+        // Append the extracted number to the specified h4 element
+        const heading = document.querySelector('h4.text-black.pl-2.font-weight-bold');
+        if (heading) {
+            const span = document.createElement('span');
+            span.style.color = 'red';
+            span.style.marginLeft = '10px';
+            span.textContent = `(${extractedNumber} Seats Available)`;
+            heading.appendChild(span);
+        }
+    }
+
+    // Run the function if the URL matches the pattern
+    findSeats(currentURL);
+})();
+
+//Find Max Seats in each flight
+// (function () {
+//     'use strict';
+
+//     function createIframe() {
+//         const iframe = document.createElement('iframe');
+//         iframe.style.display = 'none';
+//         document.body.appendChild(iframe);
+//         return iframe;
+//     }
+
+//     async function checkSeats(iframe) {
+//         await new Promise((resolve) => setTimeout(resolve, 1000));
+
+//         const adultInput = iframe.contentDocument.querySelector('#adults');
+//         const confirmButton = iframe.contentDocument.querySelector('.btn.cust_btnn.bg_blue.rounded.text-white.btn-block');
+
+//         if (!adultInput || !confirmButton) {
+//             return "Input fields or button not found";
+//         }
+
+//         adultInput.value = 500;
+//         adultInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+//         confirmButton.click();
+
+//         return new Promise((resolve) => {
+//             setTimeout(() => {
+//                 const popup = iframe.contentDocument.querySelector('#swal2-content');
+//                 const match = popup ? popup.innerText.match(/\d+/) : null;
+//                 resolve(match ? match[0] : '0');
+//             }, 1000);
+//         });
+//     }
+
+//     async function findMaxAdults(iframe, url) {
+//         return new Promise((resolve) => {
+//             iframe.src = url;
+//             iframe.onload = async () => {
+//                 const extractedNumber = await checkSeats(iframe);
+//                 const pathOnly = url.replace(window.location.origin, '');
+//                 const button = document.querySelector(`a[href="${pathOnly}"].btn-book`);
+
+//                 if (button) {
+//                     const seatText = extractedNumber;
+//                     button.textContent = `HK${seatText}`;
+//                 }
+
+//                 resolve();
+//             };
+//         });
+//     }
+
+//     async function processAllUrls(buttons) {
+//         const iframe = createIframe();
+
+//         for (let i = 0; i < buttons.length; i++) {
+//             const sectorURL = buttons[i].href;
+//             await findMaxAdults(iframe, sectorURL);
+//             await new Promise((resolve) => setTimeout(resolve, 50));
+//         }
+
+//         document.body.removeChild(iframe);
+//     }
+
+//     function waitForButtons() {
+//         const observer = new MutationObserver((mutationsList, observer) => {
+//             const buttons = document.querySelectorAll('a.btn-book');
+//             if (buttons.length > 0) {
+//                 processAllUrls(buttons);
+//                 observer.disconnect();
+//             }
+//         });
+
+//         observer.observe(document.body, { childList: true, subtree: true });
+//     }
+
+//     waitForButtons();
+// })();

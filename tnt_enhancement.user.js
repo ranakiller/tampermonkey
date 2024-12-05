@@ -368,7 +368,8 @@
         button.style.backgroundColor = 'white';
         button.style.color = 'blue';
         button.style.padding = '5px 10px';
-        button.style.border = '1px solid blue';
+        button.style.border = 'none';
+        button.style.borderRadius = '4px';
         button.style.cursor = 'pointer';
 
         button.onclick = () => {

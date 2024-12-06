@@ -1,8 +1,10 @@
 // ==UserScript==
-// @name         Enhanced Automation for Skypass Portal
-// @namespace    https://skypass.pk/
-// @version      1.1
+// @name         Skypass Ticketing Portal Enhancements
+// @namespace    skypass_enhancements
+// @version      12.6.24
 // @description  This script automates tasks on the Skypass ticket portal, including adding functionality to display days between dates, and streamlining user interaction.
+// @downloadURL	 https://github.com/ranakiller/tampermonkey/raw/refs/heads/main/skypass_enhancements.user.js
+// @updateURL    https://github.com/ranakiller/tampermonkey/raw/refs/heads/main/skypass_enhancements.user.js
 // @author       Rana Furqan
 // @match        https://skypass.pk/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=skypass.pk
@@ -19,7 +21,7 @@
 
         if (emailField && passwordField) {
             emailField.value = 'skypass.umrah@gmail.com';
-            passwordField.value = 'Umradp@spt2024';
+            passwordField.value = 'gzG3FUTUVfsAsi@';
 
             const loginButton = document.querySelector('#main_author_form button[type="submit"]');
 
@@ -132,33 +134,53 @@
     observeDOM(); // Start observing for changes
 })();
 
-// Putting TextAreas and creating Whatsapp Message text
+// Putting copy button and creating Whatsapp Message text
 (function () {
     'use strict';
 
-    // Helper function to create and style a textarea
-    function createStyledTextarea(parent, id, text = '', styles = {}) {
-        let textarea = document.getElementById(id);
-        if (!textarea) {
-            textarea = document.createElement('textarea');
-            textarea.id = id;
-            parent.appendChild(textarea);
+    // Helper function to create and style a copy button
+    function createCopyButton(parent, id, text) {
+        let button = document.getElementById(id);
+        if (!button) {
+            button = document.createElement('button');
+            button.id = id;
+            button.innerText = 'Copy';
+            button.className = 'button h-40 px-24 -dark-1 bg-blue-1 text-white"'; // Add your preferred styling classes
+            button.style.marginLeft = '10px';
+            button.style.color = 'white';
+            parent.appendChild(button);
+
+            // Add click event to copy text to clipboard
+            button.addEventListener('click', () => {
+                navigator.clipboard.writeText(text).then(() => {
+                    // Change button text and color to indicate success
+                    button.textContent = 'Done';
+                    button.style.color = 'black';
+
+                    // Revert back to original state after 1 seconds
+                    setTimeout(() => {
+                        button.textContent = 'Copy';
+                        button.style.backgroundColor = '#007bff';
+                    }, 1000);
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                });
+            });
+        } else {
+            // Update the button's text if it already exists
+            button.onclick = () => {
+                navigator.clipboard.writeText(text).then(() => {
+                    // alert('Copied to clipboard!');
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                });
+            };
         }
-        Object.assign(textarea.style, {
-            width: styles.width || '100%',
-            height: styles.height || '100px',
-            backgroundColor: styles.backgroundColor || '#f5f5f5',
-            color: styles.color || '#333',
-            border: styles.border || '1px solid #ccc',
-            marginLeft: styles.marginLeft || '0',
-        });
-        textarea.className = 'border-light text-dark-1 h-40 form-control';
-        textarea.value = text;
-        return textarea;
+        return button;
     }
 
     // Header processing function
-    function processHeaders(container, headerTextAreas) {
+    function processHeaders(container, headerTexts) {
         const airlineHeaders = document.querySelectorAll('tr.airline td .d-flex');
 
         airlineHeaders.forEach((targetDiv) => {
@@ -168,23 +190,18 @@
 
             const id = `${airlineCode}-${h4Text.replace(/\s+/g, '-')}-Head`;
 
-            if (!(id in headerTextAreas)) {
-                headerTextAreas[id] = ''; // Initialize text storage for this header
+            if (!(id in headerTexts)) {
+                headerTexts[id] = ''; // Initialize text storage for this header
             }
 
-            createStyledTextarea(targetDiv.parentElement, id, headerTextAreas[id], {
-                width: '50%',
-                marginLeft: '10px',
-                backgroundColor: window.getComputedStyle(targetDiv.parentElement).backgroundColor,
-                color: window.getComputedStyle(targetDiv.parentElement).color,
-            });
+            createCopyButton(targetDiv.parentElement, id, headerTexts[id]);
         });
 
-        return headerTextAreas;
+        return headerTexts;
     }
 
     // Helper function to process individual rows
-    function processRow(row, rowIndex, currentHeaderId, headerTextAreas, processedRows) {
+    function processRow(row, rowIndex, currentHeaderId, headerTexts, processedRows) {
         const cells = row.getElementsByTagName('td');
         if (cells.length < 6) return;
 
@@ -198,10 +215,10 @@
         const price = cells[6].querySelector('.price-format span:nth-child(2)')?.innerText.trim() || '';
 
         let numericPrice = Number(price.replace(/,/g, ''));
-        let textBoxValue = `*FARE ${numericPrice}*`;
+        let buttonText = `*FARE ${numericPrice}*`;
 
         if (flightNumbers.length > 1) {
-            textBoxValue += ` \`${duration}\``;
+            buttonText += ` \`${duration}\``;
         }
 
         if (flightNumbers.length > 0 && dates.length > 0 && routes.length > 0 && times.length > 0) {
@@ -211,26 +228,15 @@
                 const route = routes[i]?.replace(/\s+/g, '').replace(/-/g, '') || '';
                 const time = times[i]?.replace(/:/g, '').replace(/-/g, ' ') || '';
 
-                textBoxValue += `\n\`\`\`${flight} ${date} ${route} ${time}\`\`\``;
+                buttonText += `\n\`\`\`${flight} ${date} ${route} ${time}\`\`\``;
             }
         }
 
-        let textArea = cells[5].querySelector('textarea');
-        if (!textArea) {
-            textArea = createStyledTextarea(cells[5], `${currentHeaderId}-r${rowIndex}`);
-        }
+        createCopyButton(cells[5], `${currentHeaderId}-r${rowIndex}`, buttonText);
 
-        textArea.value = textBoxValue;
-
-        // Append to the header's textarea content
-        if (currentHeaderId && headerTextAreas[currentHeaderId] !== undefined) {
-            headerTextAreas[currentHeaderId] += textBoxValue + '\n\n';
-
-            // Update the corresponding header textarea
-            const headerTextArea = document.getElementById(currentHeaderId);
-            if (headerTextArea) {
-                headerTextArea.value = headerTextAreas[currentHeaderId];
-            }
+        // Append to the header's text content
+        if (currentHeaderId && headerTexts[currentHeaderId] !== undefined) {
+            headerTexts[currentHeaderId] += buttonText + '\n\n';
         }
 
         processedRows.add(row);
@@ -241,7 +247,7 @@
         if (!container) return;
 
         const processedRows = new Set();
-        let headerTextAreas = {};
+        let headerTexts = {};
 
         function processRows() {
             const rows = container.querySelectorAll('tr');
@@ -259,24 +265,24 @@
                     currentHeaderId = `${airlineCode}-${h4Text.replace(/\s+/g, '-')}-Head`;
                 } else {
                     if (!processedRows.has(row)) {
-                        processRow(row, index, currentHeaderId, headerTextAreas, processedRows);
+                        processRow(row, index, currentHeaderId, headerTexts, processedRows);
                     }
                 }
             });
         }
 
         const observer = new MutationObserver(() => {
-            processHeaders(container, headerTextAreas);
+            processHeaders(container, headerTexts);
             processRows();
         });
 
         observer.observe(container, { childList: true, subtree: true });
-        headerTextAreas = processHeaders(container, headerTextAreas);
+        headerTexts = processHeaders(container, headerTexts);
         processRows();
     });
 })();
 
-// ----------- 2nd Fucntion for removing Blurry Overlay on Cancelled Bookings -----------
+// ----------- Fucntion for removing Blurry Overlay on Cancelled Bookings -----------
 (function() {
     'use strict';
 
@@ -371,7 +377,7 @@
     }
 })();
 
-// ----------- 3rd Function for Formatting DOB & DOE -----------
+// ----------- Function for Formatting DOB & DOE -----------
 (function() {
     'use strict';
 
@@ -862,3 +868,152 @@
     const currentURL = window.location.href;
     findMaxAdults(currentURL);
 })();
+
+// auto check review checkbox
+(function () {
+    'use strict';
+
+    // Wait for the page to fully load
+    window.addEventListener('load', function () {
+        // Function to check and click the checkbox
+        function autoClickCheckbox() {
+            // Find the checkbox by its ID
+            const checkbox = document.getElementById('confirm-cehckbox');
+            if (checkbox && !checkbox.checked) {
+                checkbox.click(); // Click the checkbox if it's not already checked
+
+                // Stop observing once the checkbox is checked
+                observer.disconnect();
+            }
+        }
+
+        // Create a MutationObserver
+        const observer = new MutationObserver(() => {
+            autoClickCheckbox();
+        });
+
+        // Start observing changes in the DOM
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        // Initial call in case the checkbox is already present
+        autoClickCheckbox();
+    });
+})();
+
+//Find How Many Seats Left for all fligths
+// (function() {
+//     'use strict';
+
+//     // Select all buttons with the specified class
+//     const buttons = Array.from(document.querySelectorAll('a.btn.bg-dark-4.btn_sm.text-white'));
+
+//     // Function to create a single iframe
+//     function createIframe() {
+//         const iframe = document.createElement('iframe');
+//         iframe.style.display = 'none';
+//         document.body.appendChild(iframe);
+//         return iframe;
+//     }
+
+//     // Function to inject minimal styles into the iframe
+//     function injectMinimalStyles(iframe) {
+//         const style = document.createElement('style');
+//         style.innerHTML = `
+//             body, * {
+//                 all: unset; /* Disable all styles */
+//                 display: block !important;
+//                 visibility: visible !important;
+//                 font-size: 16px !important;
+//             }
+//             body {
+//                 background: white !important;
+//                 margin: 0;
+//                 padding: 0;
+//             }
+//         `;
+//         iframe.contentDocument.head.appendChild(style);
+//     }
+
+//     // Function to simulate setting the number of adults
+//     function setAdults(iframe, num) {
+//         return new Promise((resolve) => {
+//             const adultInput = iframe.contentDocument.querySelector('#adults');
+
+//             if (adultInput) {
+//                 adultInput.value = num;
+//                 let event = new Event('input', { bubbles: true });
+//                 adultInput.dispatchEvent(event);
+
+//                 setTimeout(() => {
+//                     let error = iframe.contentDocument.querySelector('#top-alert-message.alert.alert-danger');
+//                     if (error && error.innerText.includes("Seats not available")) {
+//                         resolve(false);
+//                     } else {
+//                         resolve(true);
+//                     }
+//                 }, 50); // Small delay to ensure event handling
+//             } else {
+//                 resolve(false);
+//             }
+//         });
+//     }
+
+//     async function findMaxAdults(iframe, url) {
+//         return new Promise((resolve) => {
+//             iframe.src = url;
+//             iframe.onload = async () => {
+//                 // Inject minimal styles after the iframe loads
+//                 injectMinimalStyles(iframe);
+
+//                 let maxAdults = 0;
+//                 let maxSeatsReached = false;
+
+//                 for (let i = 1; i <= 6; i++) {
+//                     let isValid = await setAdults(iframe, i);
+//                     if (!isValid) {
+//                         maxAdults = i - 1;
+//                         maxSeatsReached = true;
+//                         break;
+//                     } else if (i === 6) {
+//                         maxAdults = 5;
+//                         maxSeatsReached = false;
+//                     } else {
+//                         maxAdults = i;
+//                     }
+//                 }
+
+//                 // Prepare the text to display
+//                 let seatText = maxAdults < 5 ? `${maxAdults}` : "5+";
+
+//                 // Find the corresponding button and append the result below it
+//                 const button = buttons.find(btn => btn.href === url);
+//                 if (button) {
+//                     // Update the text inside the button
+//                     button.textContent = `HK${seatText}`;
+//                 }
+
+//                 resolve();
+//             };
+//         });
+//     }
+
+//     async function processAllUrls(buttons) {
+//         const iframe = createIframe();
+
+//         for (let i = 0; i < buttons.length; i++) {
+//             const sectorURL = buttons[i].href;
+//             // console.log(`Processing ${i + 1}/${buttons.length}: ${sectorURL}`);
+
+//             await findMaxAdults(iframe, sectorURL);
+
+//             // Slight delay between each URL to allow browser to catch up
+//             await new Promise(resolve => setTimeout(resolve, 50));
+//         }
+
+//         document.body.removeChild(iframe); // Clean up after processing all URLs
+//     }
+
+//     // Start processing all URLs
+//     processAllUrls(buttons);
+
+// })();

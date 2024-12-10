@@ -32,6 +32,24 @@
     });
 })();
 
+// Re-enable right-click on websites that disable it
+(function() {
+    'use strict';
+
+    // Function to enable right-click
+    const enableRightClick = () => {
+        // Remove event listeners blocking right-click
+        document.addEventListener('contextmenu', event => event.stopPropagation(), true);
+        document.addEventListener('contextmenu', event => event.stopImmediatePropagation(), true);
+        document.addEventListener('contextmenu', event => event.preventDefault(), true);
+
+        console.log('Right-click functionality restored.');
+    };
+
+    // Run the function after the page has loaded
+    window.addEventListener('load', enableRightClick);
+})();
+
 // Function to calculate days between dates
 (function() {
     'use strict';

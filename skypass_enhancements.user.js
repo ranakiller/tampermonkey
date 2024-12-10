@@ -1105,33 +1105,3 @@
 //     processAllUrls(buttons);
 
 // })();
-
-(function() {
-    'use strict';
-
-    // Wait until the page is fully loaded
-    window.addEventListener('load', function() {
-        // Select the filter button group
-        const filterGroup = document.querySelector('.filter-button-group');
-
-        if (filterGroup) {
-            // Create new input element
-            const newInput = document.createElement('input');
-            newInput.type = 'radio';
-            newInput.className = 'btn-check top-filter-btn';
-            newInput.name = 'btnradio';
-            newInput.id = 'btnradioCustom';
-            newInput.value = 'Custom';
-
-            // Create new label element
-            const newLabel = document.createElement('label');
-            newLabel.className = 'btn btn-outline-primary';
-            newLabel.setAttribute('for', 'btnradioCustom');
-            newLabel.textContent = 'Custom Filter';
-
-            // Append the new elements
-            filterGroup.appendChild(newInput);
-            filterGroup.appendChild(newLabel);
-        }
-    });
-})();

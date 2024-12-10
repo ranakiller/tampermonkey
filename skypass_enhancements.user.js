@@ -134,6 +134,76 @@
     observeDOM(); // Start observing for changes
 })();
 
+// Add Custom Filter Buttons for 15 Days and 21 Days
+(function () {
+    'use strict';
+
+    // Wait until the page is fully loaded
+    window.addEventListener('load', function () {
+        // Select the filter button group
+        const filterGroup = document.querySelector('.filter-button-group');
+
+        if (filterGroup) {
+            // Create "15 Days" button
+            createFilterButton(filterGroup, 'btnradio15Days', '15 Days', filter15Days);
+
+            // Create "21 Days" button
+            createFilterButton(filterGroup, 'btnradio21Days', '21 Days', filter21Days);
+        }
+
+        // Function to create a filter button
+        function createFilterButton(parent, id, label, clickHandler) {
+            const input = document.createElement('input');
+            input.type = 'radio';
+            input.className = 'btn-check top-filter-btn';
+            input.name = 'btnradio';
+            input.id = id;
+
+            const buttonLabel = document.createElement('label');
+            buttonLabel.className = 'btn btn-outline-primary';
+            buttonLabel.setAttribute('for', id);
+            buttonLabel.textContent = label;
+
+            parent.appendChild(input);
+            parent.appendChild(buttonLabel);
+
+            input.addEventListener('click', clickHandler);
+        }
+
+        // Function to filter rows with 15 Days or less
+        function filter15Days() {
+            filterRows(days => days > 15); // Remove rows with more than 15 days
+        }
+
+        // Function to filter rows with more than 15 Days
+        function filter21Days() {
+            filterRows(days => days <= 15); // Remove rows with 15 days or less
+        }
+
+        // Generalized function to filter rows
+        function filterRows(condition) {
+            const tableRows = document.querySelectorAll('table tbody tr'); // Adjust if necessary
+
+            tableRows.forEach(row => {
+                const daysSpan = row.querySelector('span[id^="days-span-"]'); // Adjust if necessary
+
+                if (daysSpan) {
+                    const daysText = daysSpan.textContent.trim();
+                    const daysMatch = daysText.match(/(\d+)Days/); // Match the number before "Days"
+
+                    if (daysMatch) {
+                        const days = parseInt(daysMatch[1], 10); // Convert to number
+
+                        if (condition(days)) {
+                            row.remove(); // Remove row if it meets the condition
+                        }
+                    }
+                }
+            });
+        }
+    });
+})();
+
 // Putting copy button and creating Whatsapp Message text
 (function () {
     'use strict';
@@ -201,7 +271,7 @@
     }
 
     // Helper function to process individual rows
-    function processRow(row, rowIndex, currentHeaderId, headerTexts, processedRows) {
+    function processRow(row, rowIndex, currentHeaderId, headerTexts, processedRows, prevRowDetails) {
         const cells = row.getElementsByTagName('td');
         if (cells.length < 6) return;
 
@@ -212,13 +282,23 @@
         const flightNumbers = cells[1].querySelector('.flight-number')?.innerText.trim().split('\n') || [];
         const routes = cells[2].querySelector('span.fw-bold')?.innerText.trim().split('\n') || [];
         const times = cells[3].querySelector('span.fw-bold')?.innerText.trim().split('\n') || [];
-        const price = cells[6].querySelector('.price-format span:nth-child(2)')?.innerText.trim() || '';
+        const price = cells[6].querySelector('.price-format span:nth-child(2)')?.innerText.trim().replace(/,/g, '') || '';
 
-        let numericPrice = Number(price.replace(/,/g, ''));
-        let buttonText = `*FARE ${numericPrice}*`;
+        let messageText = `\n*FARE ${price}*`;
 
-        if (flightNumbers.length > 1) {
-            buttonText += ` \`${duration}\``;
+        // Check if the fare and duration match the previous row
+        if (prevRowDetails) {
+            const { prevFare, prevDuration } = prevRowDetails;
+            // If fare and duration match the previous row, don't include them in the copied text
+            if (prevFare === price && prevDuration === duration) {
+                messageText = ''; // Reset the fare and duration text
+            } else {
+                // Otherwise, add fare and duration only if duration is not empty
+                messageText = `\n*FARE ${price}* ${duration ? `\`${duration}\`` : ''}`;
+            }
+        } else {
+            // For the first row, always include the fare and duration if it's not empty
+            messageText = `\n*FARE ${price}* ${duration ? `\`${duration}\`` : ''}`;
         }
 
         if (flightNumbers.length > 0 && dates.length > 0 && routes.length > 0 && times.length > 0) {
@@ -228,18 +308,25 @@
                 const route = routes[i]?.replace(/\s+/g, '').replace(/-/g, '') || '';
                 const time = times[i]?.replace(/:/g, '').replace(/-/g, ' ') || '';
 
-                buttonText += `\n\`\`\`${flight} ${date} ${route} ${time}\`\`\``;
+                // Only add a newline if it's not the first line
+                messageText += messageText ? `\n\`\`\`${flight} ${date} ${route} ${time}\`\`\`` : `\`\`\`${flight} ${date} ${route} ${time}\`\`\``;
             }
         }
 
-        createCopyButton(cells[5], `${currentHeaderId}-r${rowIndex}`, buttonText);
+        createCopyButton(cells[5], `${currentHeaderId}-r${rowIndex}`, messageText);
 
         // Append to the header's text content
         if (currentHeaderId && headerTexts[currentHeaderId] !== undefined) {
-            headerTexts[currentHeaderId] += buttonText + '\n\n';
+            headerTexts[currentHeaderId] += messageText + '\n';
         }
 
         processedRows.add(row);
+
+        // Store the current row details to compare with the next row
+        return {
+            prevFare: price,
+            prevDuration: duration
+        };
     }
 
     window.addEventListener('load', function () {
@@ -248,6 +335,7 @@
 
         const processedRows = new Set();
         let headerTexts = {};
+        let prevRowDetails = null;
 
         function processRows() {
             const rows = container.querySelectorAll('tr');
@@ -265,7 +353,7 @@
                     currentHeaderId = `${airlineCode}-${h4Text.replace(/\s+/g, '-')}-Head`;
                 } else {
                     if (!processedRows.has(row)) {
-                        processRow(row, index, currentHeaderId, headerTexts, processedRows);
+                        prevRowDetails = processRow(row, index, currentHeaderId, headerTexts, processedRows, prevRowDetails);
                     }
                 }
             });
@@ -1017,3 +1105,33 @@
 //     processAllUrls(buttons);
 
 // })();
+
+(function() {
+    'use strict';
+
+    // Wait until the page is fully loaded
+    window.addEventListener('load', function() {
+        // Select the filter button group
+        const filterGroup = document.querySelector('.filter-button-group');
+
+        if (filterGroup) {
+            // Create new input element
+            const newInput = document.createElement('input');
+            newInput.type = 'radio';
+            newInput.className = 'btn-check top-filter-btn';
+            newInput.name = 'btnradio';
+            newInput.id = 'btnradioCustom';
+            newInput.value = 'Custom';
+
+            // Create new label element
+            const newLabel = document.createElement('label');
+            newLabel.className = 'btn btn-outline-primary';
+            newLabel.setAttribute('for', 'btnradioCustom');
+            newLabel.textContent = 'Custom Filter';
+
+            // Append the new elements
+            filterGroup.appendChild(newInput);
+            filterGroup.appendChild(newLabel);
+        }
+    });
+})();

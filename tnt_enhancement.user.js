@@ -109,7 +109,7 @@
 
                 // Check if a span with the ID already exists
                 if (!dateCell.querySelector(`[id^="days-span-"]`)) {
-                    const daysSpan = createDaysSpan(`${days}Nts`);
+                    const daysSpan = createDaysSpan(`${days}-DAYS`);
                     dateCell.appendChild(daysSpan); // Append the span to the cell
                 }
             }
@@ -141,283 +141,134 @@
 (function () {
     'use strict';
 
-    // Function to create or update a copy button in a cell
-    function createOrUpdateCopyButton(parent, id, text = '', styles = {}) {
+    // Generate the WhatsApp message for a row
+    function generateWhatsAppMessage(row, includeFareAndDuration = true) {
+        const cells = row.getElementsByTagName('td');
+        if (cells.length < 7) {
+            return '';
+        }
+
+        function formatDate(date) {
+            const [day, month, year] = date.split('-');
+            const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+            return `${day}${monthNames[parseInt(month, 10) - 1]}`;
+        }
+
+        const dateCell = cells[0].textContent.split('\n').map(item => item.trim());
+        const flightCell = cells[1].textContent.split('\n').map(item => item.trim());
+        const routeCell = cells[2].textContent.split('\n').map(item => item.trim());
+        const timeCell = cells[3].textContent.split('\n').map(item => item.trim().replace(/[:\- ]/g, ''));
+        const priceCell = cells[6].textContent.trim().replace(' PKR/-', '');
+
+        let firstDate = dateCell[1] || 'N/A';
+        let secondDate = dateCell[2] || 'N/A';
+        let duration = dateCell.find(item => item.includes('-DAYS')) || 'N/A';
+        let firstFlight = flightCell[1] || 'N/A';
+        let secondFlight = flightCell[2] || 'N/A';
+        let firstRoute = routeCell[1] || 'N/A';
+        let secondRoute = routeCell[2] || 'N/A';
+        let firstTime = timeCell[1] || 'N/A';
+        let secondTime = timeCell[2] || 'N/A';
+        let thirdTime = timeCell[3] || 'N/A';
+        let fourthTime = timeCell[4] || 'N/A';
+
+        let message = '';
+        if (includeFareAndDuration) {
+            message = `\n*FARE ${priceCell}*`;
+            if (duration !== 'N/A') {
+                message += ` \`${duration}\``;
+            }
+        }
+        message += `\n\`\`\`${firstFlight.split(' ')[0]} ${formatDate(firstDate)} ${firstRoute.replace(/\s+/g, '')} ${firstTime} ${secondTime}\`\`\``;
+        if (secondDate === 'N/A') {
+            if (secondFlight !== 'N/A' || secondRoute !== 'N/A' || thirdTime !== 'N/A' || fourthTime !== 'N/A') {
+                message += `\n\`\`\`${secondFlight.split(' ')[0]} ${formatDate(firstDate)} ${secondRoute.replace(/\s+/g, '')} ${thirdTime} ${fourthTime}\`\`\``;
+            }
+        } else {
+            message += `\n\`\`\`${secondFlight.split(' ')[0]} ${formatDate(secondDate)} ${secondRoute.replace(/\s+/g, '')} ${thirdTime} ${fourthTime}\`\`\``;
+        }
+        return message;
+    }
+
+    // Create or update a copy button
+    function createCopyButton(parent, id, isHeader, rows, headerIndex) {
         let button = document.getElementById(id);
         if (!button) {
-            // Create the button if it doesn't exist
             button = document.createElement('button');
             button.id = id;
-            button.textContent = 'Copy';
             button.className = 'copy-button';
             parent.appendChild(button);
         }
 
-        Object.assign(button.style, {
-            padding: styles.padding || '5px 10px',
-            fontSize: styles.fontSize || '12px',
-            cursor: 'pointer',
-            backgroundColor: styles.backgroundColor || '#007bff',
-            color: styles.color || '#fff',
-            border: styles.border || 'none',
-            borderRadius: styles.borderRadius || '4px',
-            ...styles,
-        });
+        button.textContent = isHeader ? 'Copy All' : 'Copy';
+        button.style.padding = '5px 10px';
+        button.style.fontSize = '12px';
+        button.style.cursor = 'pointer';
+        button.style.backgroundColor = isHeader ? 'white' : '#007bff';
+        button.style.color = isHeader ? 'blue' : '#fff';
+        button.style.border = 'none';
+        button.style.borderRadius = '4px';
 
-        // Attach the copy functionality
         button.onclick = () => {
-            navigator.clipboard.writeText(text)
-                .then(() => {
-                    // Change button text and color to indicate success
-                    button.textContent = 'Done';
-                    button.style.color = 'black';
-                    button.style.backgroundColor = 'lightgreen';
+            const messages = [];
+            let lastFare = null;
+            let lastDuration = null;
 
-                    // Revert back to original state after 1 seconds
-                    setTimeout(() => {
-                        button.textContent = 'Copy';
-                        button.style.backgroundColor = styles.backgroundColor || '#007bff';
-                    }, 1000);
-                })
-                .catch(err => console.error('Failed to copy text: ', err));
+            if (isHeader) {
+                for (let i = headerIndex + 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    if (row.matches('.header-row tr')) break; // Stop at the next header
+                    const cells = row.getElementsByTagName('td');
+                    const currentFare = cells[6]?.textContent.trim().replace(' PKR/-', '') || null;
+                    const currentDuration = cells[0]?.textContent.split('\n').find(item => item.includes('-DAYS')) || null;
+
+                    const includeFareAndDuration = currentFare !== lastFare || currentDuration !== lastDuration;
+
+                    const message = generateWhatsAppMessage(row, includeFareAndDuration);
+                    if (message) messages.push(message);
+
+                    lastFare = currentFare;
+                    lastDuration = currentDuration;
+                }
+            } else {
+                const message = generateWhatsAppMessage(parent.parentElement);
+                if (message) messages.push(message);
+            }
+
+            const fullMessage = messages.join('\n');
+            navigator.clipboard.writeText(fullMessage).then(() => {
+                button.style.color = 'black';
+                button.style.backgroundColor = 'lightgreen';
+                setTimeout(() => {
+                    button.style.backgroundColor = isHeader ? 'white' : '#007bff';
+                }, 1000);
+            }).catch(err => console.error('Failed to copy text:', err));
         };
 
         return button;
     }
 
-    // Function to generate the WhatsApp message text (preserved original logic)
-    function generateWhatsAppMessage(row, rowIndex) {
-        const cells = row.getElementsByTagName('td');
-        if (cells.length < 7) {
-            return '';
-        }
-
-        // Helper to format the date (e.g., 26-11-2024 -> 26NOV)
-        function formatDate(date) {
-            const [day, month, year] = date.split('-');
-            const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-            return `${day}${monthNames[parseInt(month, 10) - 1]}`;
-        }
-
-        // Mapping of city names to IATA codes
-        const cityToIATA = {
-            "Dadu": "DDU", "Bhagatanwala": "BHW", "Bannu": "BNP", "Bahawalnagar": "WGB", "Bahawalpur": "BHV", "Chitral": "CJL", "Chilas": "CHB", "Dalbandin": "DBA", "Dera Ghazi Khan": "DEA", "Dera Ismael Khan": "DSK", "Faisalabad": "LYP", "Gwadar": "GWD", "Gilgit": "GIL", "Islamabad": "ISB", "Jacobabad": "JAG", "Karachi": "KHI", "Hyderabad": "HDD", "Khuzdar": "KDD", "Kohat": "OHT", "Lahore": "LHE", "Loralai": "LRG", "Mangla": "XJM", "Muzaffarabad": "MFG", "Mianwali": "MWD", "Moenjodaro": "MJD", "Sindhri": "MPD", "Kamra": "ATG", "Multan": "MUX", "Nawabashah": "WNS", "Ormara Raik": "ORW", "Parachinar": "PAJ", "Panjgur": "PJG", "Pasni": "PSI", "Peshawar": "PEW", "Quetta": "UET", "Rahim Yar Khan": "RYK", "Rawalakot": "RAZ", "Sibi": "SBQ", "Skardu": "KDU", "Mirpur Khas": "SKZ", "Sehwan Sharif": "SYW", "Sargodha": "SGI", "Saidu Sharif": "SDT", "Sialkot": "SKT", "Sui": "SUL", "Sawan Gas Field": "RZS", "Tarbela": "TLB", "Badin": "BDN", "Taftan": "TFT", "Turbat": "TUK", "Waana": "WAF", "Fort Sandeman": "PZH", "Bhurban": "BHC", "Campbellpore": "CWP", "Gujrat": "GRT", "Kadanwari": "KCF", "Chagai": "REQ", "Zamzama Gas Field": "ZIZ", "Abha": "AHB", "Hofuf": "HOF", "Al-Baha": "ABT", "Bisha": "BHH", "Dammam": "DMM", "Dawadmi": "DWD", "Dhahran": "DHA", "Jizan": "GIZ", "Buraidah": "ELQ", "Gurayat": "URY", "Ha'il": "HAS", "Jubail": "QJB", "Jeddah": "JED", "King Khaled Military City": "KMC", "Khamis Mushait": "KMX", "Medina": "MED", "Najran": "EAM", "Sharma": "NUM", "Qaisumah": "AQI", "Rafha": "RAH", "Riyadh": "RUH", "Arar": "RAE", "Sharurah": "SHW", "Al-Jawf": "AJF", "As-Sulayyil": "SLF", "Tabuk": "TUU", "Taif": "TIF", "Turaif": "TUI", "Wadi Al Dawasir": "WAE", "Al Wajh": "EJH", "Yanbu": "YNB", "Zilfi": "ZUL", "Hanak": "RSI", "Al Ula": "ULH", "Dubai": "DXB", "Muscat": "MCT", "SHARJAH": "SHJ",
-        };
-
-        // Function to replace city names with IATA codes
-        function replaceCityNamesWithIATA(text) {
-            let result = text;
-            for (const [city, iata] of Object.entries(cityToIATA)) {
-                const regex = new RegExp(`\\b${city}\\b`, "gi");
-                result = result.replace(regex, iata);
-            }
-            return result;
-        }
-
-        const dateCell = cells[0].textContent.split('\n').map(item => item.trim());
-        const flightCell = cells[1].textContent.split('\n').map(item => item.trim());
-        const routeCell = cells[2].textContent.split('\n').map(item => item.trim());
-        const timeCell = cells[3].textContent.split('\n').map(item => item.trim().replace(' ', ''));
-        const priceCell = cells[6].textContent.trim();
-
-        let firstDate = dateCell[1] || 'N/A';
-        let secondDate = dateCell[2] || 'N/A';
-        let duration = dateCell.find(item => item.toLowerCase().includes('nts')) || 'N/A';
-
-        let firstFlight = flightCell[1] || 'N/A';
-        let secondFlight = flightCell[2] || 'N/A';
-
-        let firstRoute = routeCell[1] || 'N/A';
-        let secondRoute = routeCell[2] || 'N/A';
-
-        let firstTime = timeCell[1] || 'N/A';
-        let secondTime = timeCell[2] || 'N/A';
-        let thirdTime = timeCell[3] || 'N/A';
-        let fourthTime = timeCell[4] || 'N/A';
-
-        // WhatsApp message format
-        let message = `*FARE ${priceCell}*`;
-
-        if (duration !== 'N/A') {
-            message += ` \`${duration}\``;
-        }
-
-        message += `\n\`\`\`${firstFlight.replace(' ', '')} ${formatDate(firstDate)} ${replaceCityNamesWithIATA(firstRoute).replace(/\s+/g, '')} ${firstTime}${secondTime}\`\`\``;
-
-        if (secondDate === 'N/A') {
-            if (secondFlight !== 'N/A' || secondRoute !== 'N/A' || thirdTime !== 'N/A' || fourthTime !== 'N/A') {
-                message += `\n\`\`\`${secondFlight.replace(' ', '')} ${formatDate(firstDate)} ${replaceCityNamesWithIATA(secondRoute).replace(/\s+/g, '')} ${thirdTime}${fourthTime}\`\`\``;
-            }
-        } else {
-            message += `\n\`\`\`${secondFlight.replace(' ', '')} ${formatDate(secondDate)} ${replaceCityNamesWithIATA(secondRoute).replace(/\s+/g, '')} ${thirdTime}${fourthTime}\`\`\``;
-        }
-
-        return message;
-    }
-
-    // Function to process and append a copy button to a row
-    function processRow(row, rowIndex, isHeaderRow = false) {
-        const message = generateWhatsAppMessage(row, rowIndex);
-        if (!message) {
-            return;
-        }
-
-        const cells = row.getElementsByTagName('td');
-        const targetCell = isHeaderRow ? cells[-1] : cells[5]; // Adjust target cell for header rows
-        createOrUpdateCopyButton(targetCell, `copy-button-${rowIndex + 1}`, message);
-    }
-
-    // Function to process the table rows and add copy buttons
-    function processTableRows() {
-        const rows = document.querySelectorAll('tr.main_click, thead tr'); // Include header rows as well
-        if (rows.length === 0) {
-            return;
-        }
-
-        rows.forEach((row, index) => {
-            const isHeaderRow = row.classList.contains('thead tr');
-            processRow(row, index, isHeaderRow);
-        });
-    }
-
-    // Wait for the table rows to be available and then process them
-    function waitForRows() {
-        const observer = new MutationObserver((mutations, observer) => {
-            const rows = document.querySelectorAll('tr.main_click, thead tr');
-            if (rows.length > 0) {
-                observer.disconnect();
-                processTableRows();
-            }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
-
-    // Start the observation process
-    waitForRows();
-
-})();
-
-// Put Copy Buttons for header rows
-(function () {
-    'use strict';
-
-    // Function to generate the WhatsApp message text (copied from your logic)
-    function generateWhatsAppMessage(row, rowIndex) {
-        const cells = row.getElementsByTagName('td');
-        if (cells.length < 7) {
-            return '';
-        }
-
-        function formatDate(date) {
-            const [day, month, year] = date.split('-');
-            const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-            return `${day}${monthNames[parseInt(month, 10) - 1]}`;
-        }
-
-        const cityToIATA = {
-            // "Dadu": "DDU", "Bhagatanwala": "BHW", "Bannu": "BNP",
-        };
-
-        function replaceCityNamesWithIATA(text) {
-            let result = text;
-            for (const [city, iata] of Object.entries(cityToIATA)) {
-                const regex = new RegExp(`\\b${city}\\b`, "gi");
-                result = result.replace(regex, iata);
-            }
-            return result;
-        }
-
-        const dateCell = cells[0].textContent.split('\n').map(item => item.trim());
-        const flightCell = cells[1].textContent.split('\n').map(item => item.trim());
-        const routeCell = cells[2].textContent.split('\n').map(item => item.trim());
-        const timeCell = cells[3].textContent.split('\n').map(item => item.trim().replace(' ', ''));
-        const priceCell = cells[6].textContent.trim();
-
-        let firstDate = dateCell[1] || 'N/A';
-        let secondDate = dateCell[2] || 'N/A';
-        let duration = dateCell.find(item => item.toLowerCase().includes('nts')) || 'N/A';
-        let firstFlight = flightCell[1] || 'N/A';
-        let secondFlight = flightCell[2] || 'N/A';
-        let firstRoute = routeCell[1] || 'N/A';
-        let secondRoute = routeCell[2] || 'N/A';
-        let firstTime = timeCell[1] || 'N/A';
-        let secondTime = timeCell[2] || 'N/A';
-        let thirdTime = timeCell[3] || 'N/A';
-        let fourthTime = timeCell[4] || 'N/A';
-
-        let message = `*FARE ${priceCell}*`;
-        if (duration !== 'N/A') {
-            message += ` \`${duration}\``;
-        }
-        message += `\n\`\`\`${firstFlight.replace(' ', '')} ${formatDate(firstDate)} ${replaceCityNamesWithIATA(firstRoute).replace(/\s+/g, '')} ${firstTime}${secondTime}\`\`\``;
-        if (secondDate === 'N/A') {
-            if (secondFlight !== 'N/A' || secondRoute !== 'N/A' || thirdTime !== 'N/A' || fourthTime !== 'N/A') {
-                message += `\n\`\`\`${secondFlight.replace(' ', '')} ${formatDate(firstDate)} ${replaceCityNamesWithIATA(secondRoute).replace(/\s+/g, '')} ${thirdTime}${fourthTime}\`\`\``;
-            }
-        } else {
-            message += `\n\`\`\`${secondFlight.replace(' ', '')} ${formatDate(secondDate)} ${replaceCityNamesWithIATA(secondRoute).replace(/\s+/g, '')} ${thirdTime}${fourthTime}\`\`\``;
-        }
-        return message;
-    }
-
-    // Function for the header row copy button
-    function createHeaderCopyButton(headerRow, headerIndex, rows) {
-        const headerCell = headerRow.lastElementChild;
-        const button = document.createElement('button');
-        button.textContent = 'Copy All flights of this Sector';
-        button.style.backgroundColor = 'white';
-        button.style.color = 'blue';
-        button.style.padding = '5px 10px';
-        button.style.border = 'none';
-        button.style.borderRadius = '4px';
-        button.style.cursor = 'pointer';
-
-        button.onclick = () => {
-            const messages = [];
-            for (let i = headerIndex + 1; i < rows.length; i++) {
-                const row = rows[i];
-                if (row.matches('.header-row tr')) break; // Stop at the next header
-                const message = generateWhatsAppMessage(row, i);
-                if (message) messages.push(message);
-            }
-
-            const fullMessage = messages.join('\n\n');
-            navigator.clipboard.writeText(fullMessage).then(() => {
-                button.style.color = 'black';
-                button.style.backgroundColor = 'lightgreen';
-                setTimeout(() => {
-                    button.style.backgroundColor = 'white';
-                }, 1000);
-            }).catch(err => console.error('Failed to copy text: ', err));
-        };
-
-        headerCell.appendChild(button);
-    }
-
-    // Main function to initialize header and row buttons
+    // Process all rows
     function processTable() {
         const rows = document.querySelectorAll('tr');
-        let headerIndex = -1;
-
         rows.forEach((row, index) => {
-            if (row.matches('.header-row tr')) {
-                createHeaderCopyButton(row, index, rows);
-                headerIndex = index;
+            const isHeader = row.matches('.header-row tr');
+            const cells = row.getElementsByTagName('td');
+            const targetCell = isHeader ? row.lastElementChild : cells[5]; // Adjust column for button
+            if (targetCell) {
+                createCopyButton(targetCell, `copy-button-${index}`, isHeader, rows, index);
             }
         });
     }
 
     // Wait for the table rows to be available and then process them
     function waitForRows() {
-        const observer = new MutationObserver((mutations, observer) => {
-            const rows = document.querySelectorAll('tr');
-            if (rows.length > 0) {
-                observer.disconnect();
-                processTable();
-            }
+        const observer = new MutationObserver(() => {
+            processTable();
         });
 
         observer.observe(document.body, { childList: true, subtree: true });
+        processTable(); // Initial processing
     }
 
     waitForRows();

@@ -1,14 +1,17 @@
 // ==UserScript==
 // @name         Nusuk on Steroids
 // @namespace    nusuk_on_steroids
-// @version      0312242358
+// @version      291124
 // @description  Reload Nusuk Tab, Select 50Rows, Putting Custom Buttons, Clicking Add Mutamer Repetedly, Extracting Mutamers & Groups Details, Groups Creations & Feeding Functions
 // @downloadURL	 https://github.com/ranakiller/tampermonkey/raw/refs/heads/main/nusuk_on_steroids.user.js
 // @updateURL    https://github.com/ranakiller/tampermonkey/raw/refs/heads/main/nusuk_on_steroids.user.js
 // @author       Furqan Rana
 // @match        https://umrahmasar.nusuk.sa/bsp/ExternalAgencies/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=nusuk.sa
-// @grant        none
+// @grant		GM_getValue
+// @grant		GM_setValue
+// @grant		GM_addElement
+// @grant		GM_registerMenuCommand
 // ==/UserScript==
 
 // Function to reload the Nusuk Tab
@@ -730,32 +733,108 @@
             selectOptionOnce();
         })();
 
-        (function() {
+        (function () {
             'use strict';
+
+            // Variables to store user data
+            let userData = {
+                "#MobileNo": "03001234567",
+                "#Email": "skypass.umrah@gmail.com",
+                "#Job": "NILL",
+                "#BirthCity": "PAKISTAN",
+                "#IssueCity": "PAKISTAN",
+            };
+
+            // Load user settings from localStorage
+            function loadSettings() {
+                const storedData = JSON.parse(localStorage.getItem('userFormData'));
+                if (storedData) {
+                    userData = storedData;
+                }
+            }
+
+            // Save user settings to localStorage
+            function saveSettings() {
+                localStorage.setItem('userFormData', JSON.stringify(userData));
+            }
 
             // Fill form fields
             function fillFormFieldsOnce() {
-                const valuesToFill = {
-                    "#MobileNo": "03001234567",
-                    "#Email": "skypass.umrah@gmail.com",
-                    "#Job": "NILL",
-                    "#BirthCity": "PAKISTAN",
-                    "#IssueCity": "PAKISTAN",
-                    // "#IqamaId": "000000000000000",
-                };
-
-                for (const selector in valuesToFill) {
+                for (const selector in userData) {
                     const element = document.querySelector(selector);
                     if (element) {
-                        element.value = valuesToFill[selector];
+                        element.value = userData[selector];
                     }
                 }
             }
 
+            // Create configuration panel
+            function showConfigPanel() {
+                let div = document.createElement('div');
+                div.style = `
+            all: initial !important;
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 10000 !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            background-color: rgba(0, 0, 0, 0.8) !important;
+            color: white !important;
+            font-family: Arial, sans-serif !important;
+        `;
+
+                div.innerHTML = `
+            <div style="background: #333; padding: 20px; border-radius: 8px; width: 400px;">
+                <h2 style="margin: 0 0 10px; text-align: center;">Configuration</h2>
+                <div id="formFieldsContainer">
+                    ${Object.entries(userData).map(([key, value]) => `
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: block; font-size: 14px;">${key}:</label>
+                            <input type="text" id="${key}" value="${value}" style="width: 100%; padding: 5px; border: 1px solid #555; border-radius: 4px;">
+                        </div>
+                    `).join('')}
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button id="saveConfig" style="padding: 10px 20px; background: #28a745; border: none; color: white; border-radius: 4px;">Save</button>
+                    <button id="closeConfig" style="padding: 10px 20px; background: #dc3545; border: none; color: white; border-radius: 4px;">Close</button>
+                </div>
+            </div>
+        `;
+
+                document.body.appendChild(div);
+
+                // Save and Close button actions
+                document.getElementById('saveConfig').addEventListener('click', () => {
+                    const inputs = div.querySelectorAll('input');
+                    inputs.forEach(input => {
+                        userData[input.id] = input.value;
+                    });
+                    saveSettings();
+                    alert('Configuration saved!');
+                    div.remove();
+                });
+
+                document.getElementById('closeConfig').addEventListener('click', () => {
+                    div.remove();
+                });
+            }
+
+            // Load settings on script initialization
+            loadSettings();
+
             // Run the script when the page content changes
             const observer = new MutationObserver(fillFormFieldsOnce);
             observer.observe(document, { childList: true, subtree: true });
+
+            // Add menu command for configuration (works in Tampermonkey)
+            if (typeof GM_registerMenuCommand !== "undefined") {
+                GM_registerMenuCommand("Configure Form Filler", showConfigPanel);
+            } else {
+                console.error('Your userscript manager does not support menu commands!');
+            }
         })();
+
 
         (function() {
             'use strict';
@@ -814,32 +893,41 @@
 
                 if (expiryInput && issueInput) {
                     const expiryDate = new Date(expiryInput.value);
+                    const issueDate = new Date(issueInput.value); // Get the current issue date
 
-                    // Calculate one month later date
-                    const oneMonthLater = new Date();
-                    oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
+                    // Check if the expiry date has changed and issue date is empty or equal to expiry date
+                    if ((expiryInput.dataset.lastExpiryDate !== expiryInput.value || !expiryInput.dataset.lastExpiryDate) &&
+                        (issueInput.value === '' || issueDate.toISOString().split('T')[0] === expiryDate.toISOString().split('T')[0])) {
 
-                    // Compare expiry date with one month later date
-                    if (expiryDate > oneMonthLater) {
-                        const yearsToMinus = parseInt(prompt('Enter number of years to Subtract:', '5'));
-                        const daysToAdd = parseInt(prompt('Enter number of days to Add:', '1'));
+                        // Calculate one month later date
+                        const oneMonthLater = new Date();
+                        oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
 
-                        if (isNaN(yearsToMinus) || isNaN(daysToAdd)) {
-                            alert('Invalid input. Please enter valid numbers.');
-                            return;
+                        // Compare expiry date with one month later date
+                        if (expiryDate > oneMonthLater) {
+                            const yearsToMinus = parseInt(prompt('Enter number of years to Subtract:', '5'));
+                            const daysToAdd = parseInt(prompt('Enter number of days to Add:', '1'));
+
+                            if (isNaN(yearsToMinus) || isNaN(daysToAdd)) {
+                                alert('Invalid input. Please enter valid numbers.');
+                                return;
+                            }
+
+                            expiryDate.setFullYear(expiryDate.getFullYear() - yearsToMinus);
+                            expiryDate.setDate(expiryDate.getDate() + daysToAdd);
+
+                            const formattedIssueDate = expiryDate.toISOString().split('T')[0];
+                            issueInput.value = formattedIssueDate;
+
+                            // Store the last expiry date to track changes
+                            expiryInput.dataset.lastExpiryDate = expiryInput.value;
+
+                            // Set flag to prevent repeated updates
+                            updateDone = true;
+
+                            // Stop the MutationObserver after the update
+                            observer.disconnect();
                         }
-
-                        expiryDate.setFullYear(expiryDate.getFullYear() - yearsToMinus);
-                        expiryDate.setDate(expiryDate.getDate() + daysToAdd);
-
-                        const formattedIssueDate = expiryDate.toISOString().split('T')[0];
-                        issueInput.value = formattedIssueDate;
-
-                        // Set flag to prevent repeated updates
-                        updateDone = true;
-
-                        // Stop the MutationObserver after the update
-                        observer.disconnect();
                     }
                 }
             }
@@ -992,7 +1080,7 @@
     }
 })();
 
-// Inserting Delete Row Button in Mutamer List
+// Inserting MRZ Text Area & Delete Row Button in Mutamer List
 (function() {
     'use strict';
 
@@ -1027,6 +1115,7 @@
                 textArea.style.height = '40px'; // Make the text area take full width
                 textArea.style.overflow = 'hidden'; // Hide scrollbar
                 textArea.style.resize = 'none'; // Prevent resizing
+                textArea.style.border = 'none'; // No Border
                 textArea.id = `MRZ${index}`; // Unique ID based on row index
                 textArea.className = 'form-control';
 
@@ -1036,21 +1125,20 @@
 
             // Check if the delete button already exists in the 12th cell
             if (twelfthCell && !twelfthCell.querySelector('.kt-nav__item')) {
-                // Clear existing content in the 12th cell
-                // twelfthCell.innerHTML = '';
+                const deleteText = twelfthCell.textContent || twelfthCell.innerText; // Get the existing text in the 12th cell
 
-                // Create the delete button
-                const delButton = document.createElement('a');
-                delButton.className = 'kt-nav__item';
-                delButton.innerHTML = `<i class="kt-nav__link-icon flaticon2-cross" style="color: black;"></i>`;
+                // Make the existing text clickable and delete the row on click
+                twelfthCell.innerHTML = ''; // Clear existing content in the cell
+                const clickableText = document.createElement('span');
+                clickableText.style.cursor = 'pointer';
+                clickableText.textContent = deleteText || 'Delete'; // Default to 'Delete' if no text is present
 
-                // Add event listener to delete the row
-                delButton.addEventListener('click', function() {
+                clickableText.addEventListener('click', function() {
                     row.remove(); // Removes the row
                 });
 
-                // Add the delete button to the 12th cell
-                twelfthCell.appendChild(delButton);
+                twelfthCell.appendChild(clickableText); // Add the clickable text to the 12th cell
+
             }
         });
     }

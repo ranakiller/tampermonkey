@@ -42,8 +42,6 @@
         document.addEventListener('contextmenu', event => event.stopPropagation(), true);
         document.addEventListener('contextmenu', event => event.stopImmediatePropagation(), true);
         document.addEventListener('contextmenu', event => event.preventDefault(), true);
-
-        console.log('Right-click functionality restored.');
     };
 
     // Run the function after the page has loaded
@@ -77,55 +75,91 @@
         const flightInfo = document.querySelectorAll('.flight_search_sector_info span:nth-child(2)');
         if (!flightInfo || flightInfo.length < 2) return;
 
-        const departureDate = flightInfo[0].textContent.trim();
-        const returnDate = flightInfo[1].textContent.trim();
-        const days = calculateDays(departureDate, returnDate);
+        // Collect all flight dates
+        const flightDates = Array.from(flightInfo).map(span => span.textContent.trim());
 
-        if (days > 1) {
-            const destinationDivs = document.querySelectorAll('.flight_search_destination');
-            if (destinationDivs.length >= 2) {
-                const secondDestinationDiv = destinationDivs[1];
-                // Check if a span with the ID already exists
-                if (!secondDestinationDiv.querySelector(`[id^="days-span-"]`)) {
-                    const daysSpan = createDaysSpan(`${days}D`);
-                    secondDestinationDiv.appendChild(daysSpan);
+        // Parse the dates
+        const parsedDates = flightDates.map((dateStr) => {
+            let [day, month, year] = dateStr.split(/\s+/);
+            day = parseInt(day, 10);
+            month = new Date(`${month} 1`).getMonth(); // Convert month name to index
+
+            if (!year) {
+                // Handle missing year by inferring it
+                const currentYear = new Date().getFullYear();
+                const currentMonth = new Date().getMonth();
+                const assumedYear = (month < currentMonth && month < 2) ? currentYear + 1 : currentYear;
+                year = assumedYear;
+            }
+
+            return new Date(year, month, day);
+        });
+
+        // Sort dates in ascending order
+        parsedDates.sort((a, b) => a - b);
+
+        // Calculate differences between consecutive dates
+        for (let i = 0; i < parsedDates.length - 1; i++) {
+            const diff = Math.floor((parsedDates[i + 1] - parsedDates[i]) / (1000 * 60 * 60 * 24));
+
+            if (diff > 1) {
+                // Find the destination div and ensure no days span is already added
+                const destinationDivs = document.querySelectorAll('.flight_search_destination');
+                if (destinationDivs.length >= 2) {
+                    const secondDestinationDiv = destinationDivs[1];
+
+                    // Check if a span with the ID already exists
+                    if (!secondDestinationDiv.querySelector(`[id^="days-span-"]`)) {
+                        const daysSpan = createDaysSpan(`${diff}D`);
+                        secondDestinationDiv.appendChild(daysSpan);
+                    }
                 }
             }
         }
     }
 
-    function processAllDates() {
+    function processDatesAndCalculateDays() {
         const cells = document.querySelectorAll("td.text-center span.fw-bold:first-of-type");
+
+        const currentYear = new Date().getFullYear();
+        const currentMonth = new Date().getMonth(); // 0-based index (0 = January)
+
         for (const cell of cells) {
             const text = cell.textContent.trim();
-            const matches = text.match(/(\d{2}\s[A-Za-z]+\s\d{4})/g);
+            const matches = text.match(/(\d{2}\s[A-Za-z]+)(\s\d{4})?/g); // Match dates with or without year
 
-            if (matches && matches.length >= 2) {
-                const date1 = new Date(matches[0]);
-                const date2 = new Date(matches[1]);
-                let diff;
+            if (matches && matches.length > 1) {
+                // Parse dates and handle missing years
+                const parsedDates = matches.map((dateStr) => {
+                    let [day, month, year] = dateStr.split(/\s+/);
+                    day = parseInt(day, 10);
+                    month = new Date(`${month} 1`).getMonth(); // Convert month name to index
 
-                if (matches.length >= 4) {
-                    const date3 = new Date(matches[2]);
-                    const date4 = new Date(matches[3]);
-                    diff = Math.floor((date3 - date2) / (1000 * 60 * 60 * 24));
-
-                    if (diff > 1 && !cell.parentNode.querySelector(`[id^="days-span-"]`)) {
-                        const days = createDaysSpan(`${diff}Days`);
-                        cell.parentNode.insertBefore(days, cell.nextSibling);
+                    if (!year) {
+                        // Handle missing year by inferring it
+                        const assumedYear = (month < currentMonth && month < 2) ? currentYear + 1 : currentYear;
+                        year = assumedYear;
                     }
-                } else {
-                    diff = Math.floor((date2 - date1) / (1000 * 60 * 60 * 24));
+
+                    return new Date(year, month, day);
+                });
+
+                // Sort dates
+                parsedDates.sort((a, b) => a - b);
+
+                // Calculate differences between consecutive dates
+                for (let i = 0; i < parsedDates.length - 1; i++) {
+                    const diff = Math.floor((parsedDates[i + 1] - parsedDates[i]) / (1000 * 60 * 60 * 24));
 
                     if (diff > 1 && !cell.parentNode.querySelector(`[id^="days-span-"]`)) {
-                        const days = createDaysSpan(`${diff}Days`);
-                        cell.parentNode.insertBefore(days, cell.nextSibling);
+                        const daysSpan = createDaysSpan(`${diff} Days`);
+                        cell.parentNode.insertBefore(daysSpan, cell.nextSibling);
                     }
                 }
             }
         }
 
-        processFlightDates();
+        processFlightDates(); // Retain this to process flight-specific dates if needed
     }
 
     function observeDOM() {
@@ -138,7 +172,7 @@
                     // Re-run the function if any spans are missing
                     const missingSpans = document.querySelectorAll('[id^="days-span-"]').length === 0;
                     if (missingSpans) {
-                        processAllDates();
+                        processDatesAndCalculateDays();
                     }
                 }
             }
@@ -148,7 +182,7 @@
         observer.observe(targetNode, config);
     }
 
-    processAllDates(); // Initial execution
+    processDatesAndCalculateDays(); // Initial execution
     observeDOM(); // Start observing for changes
 })();
 
@@ -190,12 +224,12 @@
 
         // Function to filter rows with 15 Days or less
         function filter15Days() {
-            filterRows(days => days > 15); // Remove rows with more than 15 days
+            filterRows(days => days > 16); // Remove rows with more than 15 days
         }
 
         // Function to filter rows with more than 15 Days
         function filter21Days() {
-            filterRows(days => days <= 15); // Remove rows with 15 days or less
+            filterRows(days => days <= 16); // Remove rows with 15 days or less
         }
 
         // Generalized function to filter rows
@@ -302,23 +336,16 @@
         const times = cells[3].querySelector('span.fw-bold')?.innerText.trim().split('\n') || [];
         const price = cells[6].querySelector('.price-format span:nth-child(2)')?.innerText.trim().replace(/,/g, '') || '';
 
-        let messageText = `\n*FARE ${price}*`;
-
-        // Check if the fare and duration match the previous row
-        if (prevRowDetails) {
-            const { prevFare, prevDuration } = prevRowDetails;
-            // If fare and duration match the previous row, don't include them in the copied text
-            if (prevFare === price && prevDuration === duration) {
-                messageText = ''; // Reset the fare and duration text
-            } else {
-                // Otherwise, add fare and duration only if duration is not empty
-                messageText = `\n*FARE ${price}* ${duration ? `\`${duration}\`` : ''}`;
-            }
+        // **Header Aggregation Logic** (unchanged)
+        let headerMessageText = `*FARE ${price}*`;
+        if (prevRowDetails?.prevFare === price && prevRowDetails?.prevDuration === duration) {
+            headerMessageText = ''; // Skip fare and duration
         } else {
-            // For the first row, always include the fare and duration if it's not empty
-            messageText = `\n*FARE ${price}* ${duration ? `\`${duration}\`` : ''}`;
+            headerMessageText = `\n*FARE ${price}* ${duration ? `\`${duration}\`` : '\n'}`;
         }
 
+        // **Individual Row Message Logic** (always include fare and duration)
+        let individualMessageText = `*FARE ${price}* ${duration ? `\`${duration}\`` : '\n'}`;
         if (flightNumbers.length > 0 && dates.length > 0 && routes.length > 0 && times.length > 0) {
             for (let i = 0; i < flightNumbers.length; i++) {
                 const flight = flightNumbers[i]?.replace(/\s+/g, '') || '';
@@ -326,26 +353,32 @@
                 const route = routes[i]?.replace(/\s+/g, '').replace(/-/g, '') || '';
                 const time = times[i]?.replace(/:/g, '').replace(/-/g, ' ') || '';
 
-                // Only add a newline if it's not the first line
-                messageText += messageText ? `\n\`\`\`${flight} ${date} ${route} ${time}\`\`\`` : `\`\`\`${flight} ${date} ${route} ${time}\`\`\``;
+                // Conditionally add '\n' only if there are multiple lines
+                const prefix = flightNumbers.length > 1 ? '\n' : '';
+                const flightInfo = `${prefix}\`\`\`${flight} ${date} ${route} ${time}\`\`\``;
+
+                headerMessageText += flightInfo;
+                individualMessageText += flightInfo;
             }
         }
 
-        createCopyButton(cells[5], `${currentHeaderId}-r${rowIndex}`, messageText);
+        // Attach individual copy button with its specific message
+        createCopyButton(cells[5], `${currentHeaderId}-r${rowIndex}`, individualMessageText);
 
-        // Append to the header's text content
+        // Aggregate message text for headers
         if (currentHeaderId && headerTexts[currentHeaderId] !== undefined) {
-            headerTexts[currentHeaderId] += messageText + '\n';
+            headerTexts[currentHeaderId] += headerMessageText + '\n';
         }
 
         processedRows.add(row);
 
-        // Store the current row details to compare with the next row
+        // Store current row details for comparison with the next row
         return {
             prevFare: price,
             prevDuration: duration
         };
     }
+
 
     window.addEventListener('load', function () {
         const container = document.getElementById('colcontent');
@@ -369,6 +402,7 @@
                     const nextRow = airlineHeader.closest('tr').nextElementSibling;
                     const airlineCode = nextRow?.querySelector('.flight-number')?.innerText.trim().substring(0, 2) || 'xx';
                     currentHeaderId = `${airlineCode}-${h4Text.replace(/\s+/g, '-')}-Head`;
+                    prevRowDetails = null; // Correctly resets for a new header
                 } else {
                     if (!processedRows.has(row)) {
                         prevRowDetails = processRow(row, index, currentHeaderId, headerTexts, processedRows, prevRowDetails);
@@ -387,6 +421,116 @@
         processRows();
     });
 })();
+
+// Putting copy button in seats booking webpage
+(function () {
+    'use strict';
+
+    // Function to create a "Copy" button
+    function createCopyButton(div, id, formattedTextCallback) {
+        let button = document.getElementById(id);
+        if (!button) {
+            // Find the first image in the div
+            let imageElement = div.querySelector('.flight_logo img');
+            if (imageElement) {
+                button = document.createElement('button');
+                button.id = id;
+                button.innerText = 'Copy';
+                button.className = 'btn bg-dark-4 btn_sm text-white';
+
+                // Insert the button in place of the image
+                imageElement.parentElement.replaceChild(button, imageElement);
+
+                // Add the copy functionality
+                button.addEventListener('click', () => {
+                    const formattedText = formattedTextCallback();
+                    navigator.clipboard.writeText(formattedText).then(() => {
+                        button.textContent = 'Done';
+                        setTimeout(() => {
+                            button.textContent = 'Copy';
+                        }, 1000);
+                    }).catch(err => {
+                        console.error('Failed to copy text:', err);
+                    });
+                });
+            }
+        }
+    }
+
+    // Function to extract and format the div content
+    function formatDivContent(div) {
+        let message = '';
+
+        // Extract fare (Adult Price)
+        let fareElement = div.querySelector('.flight_search_middel:nth-of-type(5) .fw-bold');
+        let fare = fareElement ? fareElement.textContent.trim().replace(/PKR|,/g, '').trim() : '0';
+        message += `*FARE ${fare}*`;
+
+        // Extract days
+        let daysElement = div.querySelector('#days-span-1');
+        let days = daysElement ? daysElement.textContent.trim() : '';
+        message += days !== '' ? ` \`${days}\`` : '';
+
+        // Extract seats
+        let seatsElement = div.querySelector('.flight_search_middel:nth-of-type(6) .text-white');
+        let seats = seatsElement ? seatsElement.textContent.trim() : '0';
+        message += ` 💺(${seats})\n`;
+
+        // Extract sector information
+        let sectors = div.querySelectorAll('.flight_search_sector_info');
+        sectors.forEach((sector, index) => {
+            let details = Array.from(sector.querySelectorAll('span.fw-bold')).map(el => el.textContent.trim());
+            if (details.length >= 4) {
+                let flight = details[0].replace(/\s/g, '');
+                let date = details[1].toUpperCase().replace(/\s/g, '').replace(/\d{4}/, '');
+                let route = details[2].replace(/-/g, '');
+                let times = details[3].replace(/:/g, '');
+
+                message += `\`\`\`${flight} ${date} ${route} ${times}\`\`\`\n`;
+            }
+        });
+
+        return message.trim();
+    }
+
+    // Function to observe changes to the seats element
+    function observeSeatsChange(div, buttonId, formattedTextCallback) {
+        let seatsElement = div.querySelector('.flight_search_middel:nth-of-type(6) .text-white');
+        if (seatsElement) {
+            const observer = new MutationObserver(() => {
+                // Update button with the latest formatted text
+                const button = document.getElementById(buttonId);
+                if (button) {
+                    button.remove(); // Remove the old button to ensure updated data
+                }
+                createCopyButton(div, buttonId, formattedTextCallback);
+            });
+
+            observer.observe(seatsElement, { childList: true, subtree: true, characterData: true });
+        } else {
+            console.error('Seats element not found for observation.');
+        }
+    }
+
+    // Main logic
+    window.addEventListener('load', function () {
+        let targetDiv = document.querySelector('.multi_city_flight_lists');
+        if (!targetDiv) {
+            console.error('Target div not found.');
+            return;
+        }
+
+        // Define a callback to always get the latest formatted text
+        const formattedTextCallback = () => formatDivContent(targetDiv);
+
+        // Create the initial "Copy" button
+        createCopyButton(targetDiv, 'copy-button', formattedTextCallback);
+
+        // Observe changes to the seats value
+        observeSeatsChange(targetDiv, 'copy-button', formattedTextCallback);
+    });
+})();
+
 
 // ----------- Fucntion for removing Blurry Overlay on Cancelled Bookings -----------
 (function() {
@@ -1006,7 +1150,7 @@
     });
 })();
 
-//Find How Many Seats Left for all fligths
+//// Find How Many Seats Left for all fligths
 // (function() {
 //     'use strict';
 

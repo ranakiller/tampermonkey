@@ -190,20 +190,14 @@
 (function () {
     'use strict';
 
-    // Wait until the page is fully loaded
     window.addEventListener('load', function () {
-        // Select the filter button group
         const filterGroup = document.querySelector('.filter-button-group');
 
         if (filterGroup) {
-            // Create "15 Days" button
             createFilterButton(filterGroup, 'btnradio15Days', '15 Days', filter15Days);
-
-            // Create "21 Days" button
             createFilterButton(filterGroup, 'btnradio21Days', '21 Days', filter21Days);
         }
 
-        // Function to create a filter button
         function createFilterButton(parent, id, label, clickHandler) {
             const input = document.createElement('input');
             input.type = 'radio';
@@ -222,32 +216,27 @@
             input.addEventListener('click', clickHandler);
         }
 
-        // Function to filter rows with 15 Days or less
         function filter15Days() {
-            filterRows(days => days > 16); // Remove rows with more than 15 days
+            filterRows(days => days > 15); // Exclude rows with 15 days or less
         }
 
-        // Function to filter rows with more than 15 Days
         function filter21Days() {
-            filterRows(days => days <= 16); // Remove rows with 15 days or less
+            filterRows(days => days <= 15); // Exclude rows with more than 15 days
         }
 
-        // Generalized function to filter rows
         function filterRows(condition) {
-            const tableRows = document.querySelectorAll('table tbody tr'); // Adjust if necessary
+            const tableRows = document.querySelectorAll('table tbody tr');
 
             tableRows.forEach(row => {
-                const daysSpan = row.querySelector('span[id^="days-span-"]'); // Adjust if necessary
-
+                const daysSpan = row.querySelector('span[id^="days-span-"]');
                 if (daysSpan) {
                     const daysText = daysSpan.textContent.trim();
-                    const daysMatch = daysText.match(/(\d+)Days/); // Match the number before "Days"
+                    const daysMatch = daysText.match(/(\d+)/);
 
                     if (daysMatch) {
-                        const days = parseInt(daysMatch[1], 10); // Convert to number
-
+                        const days = parseInt(daysMatch[1], 10);
                         if (condition(days)) {
-                            row.remove(); // Remove row if it meets the condition
+                            row.remove();
                         }
                     }
                 }
@@ -255,6 +244,7 @@
         }
     });
 })();
+
 
 // Putting copy button and creating Whatsapp Message text
 (function () {
@@ -516,17 +506,12 @@
     window.addEventListener('load', function () {
         let targetDiv = document.querySelector('.multi_city_flight_lists');
         if (!targetDiv) {
-            console.error('Target div not found.');
+            // console.error('Target div not found.');
             return;
         }
 
-        // Define a callback to always get the latest formatted text
         const formattedTextCallback = () => formatDivContent(targetDiv);
-
-        // Create the initial "Copy" button
         createCopyButton(targetDiv, 'copy-button', formattedTextCallback);
-
-        // Observe changes to the seats value
         observeSeatsChange(targetDiv, 'copy-button', formattedTextCallback);
     });
 })();
@@ -995,13 +980,16 @@
     }
 
    // Initial setup
-    document.getElementById('adults').addEventListener('change', () => {
-        setTimeout(() => {
-            addMRZInputs();
-            autofillForm();
-            setupNationalityListener();
-        }, 500);
-    });
+    const adultsElement = document.getElementById('adults');
+    if (adultsElement) {
+        adultsElement.addEventListener('change', () => {
+            setTimeout(() => {
+                addMRZInputs();
+                autofillForm();
+                setupNationalityListener();
+            }, 500);
+        });
+    }
 
     function updateNationalities(newNationality) {
         const tables = [
@@ -1149,121 +1137,3 @@
         autoClickCheckbox();
     });
 })();
-
-//// Find How Many Seats Left for all fligths
-// (function() {
-//     'use strict';
-
-//     // Select all buttons with the specified class
-//     const buttons = Array.from(document.querySelectorAll('a.btn.bg-dark-4.btn_sm.text-white'));
-
-//     // Function to create a single iframe
-//     function createIframe() {
-//         const iframe = document.createElement('iframe');
-//         iframe.style.display = 'none';
-//         document.body.appendChild(iframe);
-//         return iframe;
-//     }
-
-//     // Function to inject minimal styles into the iframe
-//     function injectMinimalStyles(iframe) {
-//         const style = document.createElement('style');
-//         style.innerHTML = `
-//             body, * {
-//                 all: unset; /* Disable all styles */
-//                 display: block !important;
-//                 visibility: visible !important;
-//                 font-size: 16px !important;
-//             }
-//             body {
-//                 background: white !important;
-//                 margin: 0;
-//                 padding: 0;
-//             }
-//         `;
-//         iframe.contentDocument.head.appendChild(style);
-//     }
-
-//     // Function to simulate setting the number of adults
-//     function setAdults(iframe, num) {
-//         return new Promise((resolve) => {
-//             const adultInput = iframe.contentDocument.querySelector('#adults');
-
-//             if (adultInput) {
-//                 adultInput.value = num;
-//                 let event = new Event('input', { bubbles: true });
-//                 adultInput.dispatchEvent(event);
-
-//                 setTimeout(() => {
-//                     let error = iframe.contentDocument.querySelector('#top-alert-message.alert.alert-danger');
-//                     if (error && error.innerText.includes("Seats not available")) {
-//                         resolve(false);
-//                     } else {
-//                         resolve(true);
-//                     }
-//                 }, 50); // Small delay to ensure event handling
-//             } else {
-//                 resolve(false);
-//             }
-//         });
-//     }
-
-//     async function findMaxAdults(iframe, url) {
-//         return new Promise((resolve) => {
-//             iframe.src = url;
-//             iframe.onload = async () => {
-//                 // Inject minimal styles after the iframe loads
-//                 injectMinimalStyles(iframe);
-
-//                 let maxAdults = 0;
-//                 let maxSeatsReached = false;
-
-//                 for (let i = 1; i <= 6; i++) {
-//                     let isValid = await setAdults(iframe, i);
-//                     if (!isValid) {
-//                         maxAdults = i - 1;
-//                         maxSeatsReached = true;
-//                         break;
-//                     } else if (i === 6) {
-//                         maxAdults = 5;
-//                         maxSeatsReached = false;
-//                     } else {
-//                         maxAdults = i;
-//                     }
-//                 }
-
-//                 // Prepare the text to display
-//                 let seatText = maxAdults < 5 ? `${maxAdults}` : "5+";
-
-//                 // Find the corresponding button and append the result below it
-//                 const button = buttons.find(btn => btn.href === url);
-//                 if (button) {
-//                     // Update the text inside the button
-//                     button.textContent = `HK${seatText}`;
-//                 }
-
-//                 resolve();
-//             };
-//         });
-//     }
-
-//     async function processAllUrls(buttons) {
-//         const iframe = createIframe();
-
-//         for (let i = 0; i < buttons.length; i++) {
-//             const sectorURL = buttons[i].href;
-//             // console.log(`Processing ${i + 1}/${buttons.length}: ${sectorURL}`);
-
-//             await findMaxAdults(iframe, sectorURL);
-
-//             // Slight delay between each URL to allow browser to catch up
-//             await new Promise(resolve => setTimeout(resolve, 50));
-//         }
-
-//         document.body.removeChild(iframe); // Clean up after processing all URLs
-//     }
-
-//     // Start processing all URLs
-//     processAllUrls(buttons);
-
-// })();

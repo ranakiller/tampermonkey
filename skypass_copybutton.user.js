@@ -63,7 +63,7 @@
 
         // Calculate differences between consecutive dates
         for (let i = 0; i < parsedDates.length - 1; i++) {
-            const diff = Math.floor((parsedDates[i + 1] - parsedDates[i]) / (1000 * 60 * 60 * 24));
+            const diff = Math.floor((parsedDates[i + 1] - parsedDates[i]) / (1000 * 60 * 60 * 24)) + 1;
 
             if (diff > 1) {
                 // Find the destination div and ensure no days span is already added
@@ -112,7 +112,7 @@
 
                 // Calculate differences between consecutive dates
                 for (let i = 0; i < parsedDates.length - 1; i++) {
-                    const diff = Math.floor((parsedDates[i + 1] - parsedDates[i]) / (1000 * 60 * 60 * 24));
+                    const diff = Math.floor((parsedDates[i + 1] - parsedDates[i]) / (1000 * 60 * 60 * 24)) + 1;
 
                     if (diff > 1 && !cell.parentNode.querySelector(`[id^="days-span-"]`)) {
                         const daysSpan = createDaysSpan(`${diff} Days`);

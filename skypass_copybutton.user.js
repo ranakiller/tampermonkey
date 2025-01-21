@@ -231,10 +231,12 @@
 
         // **Header Aggregation Logic** (unchanged)
         let headerMessageText = `*FARE ${price}*`;
-        if (prevRowDetails?.prevFare === price && prevRowDetails?.prevDuration === duration) {
-            headerMessageText = ''; // Skip fare and duration
-        } else {
+        if (duration) {
             headerMessageText = `\n*FARE ${price}* ${duration ? `\`${duration}\`` : '\n'}`;
+        } else if (prevRowDetails?.prevFare === price && prevRowDetails?.prevDuration === duration) {
+            headerMessageText = ''; // Skip fare and duration only if no days are present
+        } else {
+            headerMessageText = `\n*FARE ${price}*\n`;
         }
 
         // **Individual Row Message Logic** (always include fare and duration)
